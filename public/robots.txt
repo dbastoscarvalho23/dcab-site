@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /reservado
+
+Sitemap: https://dcabconsulting.com/sitemap.xml

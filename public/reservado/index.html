@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="strict-origin">
+  <title>Área reservada | DCAB Consulting</title>
+  <link rel="icon" type="image/png" href="/assets/img/favicon.png">
+  <link rel="stylesheet" href="/assets/css/estilo.css">
+  <link rel="stylesheet" href="/reservado/reservado.css">
+  <script src="/reservado/vendor/qrcode.min.js" defer></script>
+  <script src="/reservado/vendor/xlsx.full.min.js" defer></script>
+  <script src="/reservado/arranque.js"></script>
+  <script type="module" src="/reservado/app.js"></script>
+</head>
+<body class="reservado">
+  <header class="topo">
+    <div class="topo__interior">
+      <a class="topo__marca" href="/" aria-label="DCAB Consulting, página inicial">
+        <img src="/assets/img/monograma-preto.png" alt="" width="34" height="43">
+        <span>Área reservada</span>
+      </a>
+      <div class="sessao" id="sessao" hidden>
+        <span class="sessao__email" id="sessao-email"></span>
+        <button class="botao botao--pequeno botao--linha" type="button" id="botao-sair">Terminar sessão</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mensagem global -->
+  <div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+  <!-- 0. A carregar / falha no arranque -->
+  <main class="ecra" id="ecra-carregar">
+    <div class="cartao-acesso">
+      <h1 id="carregar-titulo">A preparar o acesso seguro…</h1>
+      <p id="carregar-texto">Aguarde alguns segundos.</p>
+      <p class="carregar__detalhe" id="carregar-detalhe" hidden></p>
+    </div>
+  </main>
+
+  <!-- 1. Entrada -->
+  <main class="ecra" id="ecra-entrada" hidden>
+    <div class="cartao-acesso">
+      <h1>Entrar na área reservada</h1>
+      <p>Acesso apenas por convite. Em cada entrada é pedido também o código da sua aplicação autenticadora.</p>
+      <form class="acesso__form" id="form-entrar" novalidate>
+        <div class="campo">
+          <label for="entrar-email">Email</label>
+          <input id="entrar-email" type="email" autocomplete="username" maxlength="160" required>
+        </div>
+        <div class="campo">
+          <label for="entrar-senha">Palavra-passe</label>
+          <input id="entrar-senha" type="password" autocomplete="current-password" maxlength="128" required>
+        </div>
+        <button class="botao" type="submit" id="botao-entrar">Entrar</button>
+        <button class="ligacao" type="button" id="definir-senha">Primeiro acesso ou esqueceu a palavra-passe?</button>
+      </form>
+      <p class="acesso__separador"><span>ou</span></p>
+      <div class="acesso__botoes">
+        <button class="botao botao--fornecedor" type="button" id="entrar-google">
+          <svg aria-hidden="true" viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+          Entrar com Google
+        </button>
+      </div>
+      <p class="acesso__nota">A sessão termina ao fechar o navegador ou após um período de inatividade.</p>
+    </div>
+  </main>
+
+  <!-- 2. Verificação do email -->
+  <main class="ecra" id="ecra-verificar" hidden>
+    <div class="cartao-acesso">
+      <h1>Confirme o seu endereço de email</h1>
+      <p>Para ativar a autenticação multifator, o endereço <strong id="verificar-email"></strong> tem de estar confirmado. Enviámos uma mensagem com uma ligação de confirmação; abra-a e volte a esta página.</p>
+      <div class="acesso__botoes">
+        <button class="botao" type="button" id="verificar-continuar">Já confirmei, continuar</button>
+        <button class="botao botao--linha" type="button" id="verificar-reenviar">Reenviar mensagem</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 3. Registo do segundo fator -->
+  <main class="ecra" id="ecra-mfa-registo" hidden>
+    <div class="cartao-acesso cartao-acesso--largo">
+      <h1>Ativar a autenticação multifator</h1>
+      <ol class="passos-mfa">
+        <li>Abra uma aplicação autenticadora no telemóvel (Microsoft Authenticator, Google Authenticator ou equivalente).</li>
+        <li>Leia o código QR ou introduza a chave manualmente.</li>
+        <li>Escreva o código de 6 dígitos que a aplicação apresenta.</li>
+      </ol>
+      <div class="mfa__qr">
+        <div id="mfa-qr" aria-label="Código QR de configuração"></div>
+        <div>
+          <p class="mfa__rotulo">Chave para introdução manual</p>
+          <code class="mfa__chave" id="mfa-chave"></code>
+        </div>
+      </div>
+      <form class="mfa__form" id="form-mfa-registo" novalidate>
+        <label for="mfa-codigo-registo">Código de 6 dígitos</label>
+        <input id="mfa-codigo-registo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+        <button class="botao" type="submit">Ativar</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- 4. Código do segundo fator -->
+  <main class="ecra" id="ecra-mfa-codigo" hidden>
+    <div class="cartao-acesso">
+      <h1>Autenticação multifator</h1>
+      <p>Introduza o código de 6 dígitos da sua aplicação autenticadora.</p>
+      <form class="mfa__form" id="form-mfa-codigo" novalidate>
+        <label for="mfa-codigo">Código</label>
+        <input id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+        <button class="botao" type="submit">Validar</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- 5. Sem autorização -->
+  <main class="ecra" id="ecra-sem-acesso" hidden>
+    <div class="cartao-acesso">
+      <h1>Sem acesso</h1>
+      <p>A conta <strong id="sem-acesso-email"></strong> está autenticada, mas não tem autorização para a área reservada. Peça acesso ao administrador.</p>
+    </div>
+  </main>
+
+  <!-- 6. Aplicação -->
+  <main class="app" id="app" hidden>
+    <div class="app__cabeca">
+      <div>
+        <p class="app__projeto" id="app-entidade">DCAB Consulting</p>
+        <h1 id="app-titulo">AI4CyberSecurity</h1>
+      </div>
+      <p class="app__papel" id="app-papel"></p>
+    </div>
+
+    <nav class="seccoes" aria-label="Secções">
+      <button type="button" aria-current="page" data-seccao="inicio">Início</button>
+      <button type="button" data-seccao="candidatura" hidden>Candidatura</button>
+      <button type="button" data-seccao="vigilancia" hidden>Vigilância</button>
+      <button type="button" data-seccao="incidentes" hidden>Incidentes</button>
+      <button type="button" data-seccao="vulnerabilidades" hidden>Vulnerabilidades</button>
+      <button type="button" data-seccao="acessos" hidden>Acessos</button>
+    </nav>
+
+    <nav class="separadores" aria-label="Candidatura" role="tablist" id="nav-candidatura" hidden>
+      <button role="tab" aria-selected="true" data-separador="resumo">Resumo</button>
+      <button role="tab" aria-selected="false" data-separador="despesas">Despesas</button>
+      <button role="tab" aria-selected="false" data-separador="pedidos">Pedidos de pagamento</button>
+      <button role="tab" aria-selected="false" data-separador="quadro">Quadro de investimento</button>
+      <button role="tab" aria-selected="false" data-separador="contratacao">Contratação</button>
+      <button role="tab" aria-selected="false" data-separador="parametros">Parâmetros</button>
+    </nav>
+
+    <section class="painel" id="painel-inicio"></section>
+    <section class="painel" id="painel-resumo" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-despesas" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-pedidos" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-quadro" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-contratacao" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-parametros" role="tabpanel" hidden></section>
+    <section class="painel" id="painel-vigilancia" hidden></section>
+    <section class="painel" id="painel-incidentes" hidden></section>
+    <section class="painel" id="painel-vulnerabilidades" hidden></section>
+    <section class="painel" id="painel-acessos" hidden></section>
+  </main>
+
+  <!-- Diálogo de edição (despesas, pedidos, confirmação) -->
+  <dialog class="dialogo" id="dialogo">
+    <form method="dialog" class="dialogo__form" id="dialogo-form" novalidate>
+      <h2 id="dialogo-titulo"></h2>
+      <div class="dialogo__corpo" id="dialogo-corpo"></div>
+      <p class="dialogo__erros" id="dialogo-erros" role="alert"></p>
+      <div class="dialogo__acoes">
+        <button class="botao botao--linha" type="button" id="dialogo-cancelar">Cancelar</button>
+        <button class="botao" type="submit" id="dialogo-gravar">Gravar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <noscript><p class="aviso">A área reservada precisa de JavaScript ativo no navegador.</p></noscript>
+</body>
+</html>

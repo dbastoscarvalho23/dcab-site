@@ -1,0 +1,16 @@
+{
+  "name": "dcab-funcoes",
+  "private": true,
+  "description": "Cloud Functions da área reservada DCAB Consulting",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js test/*.test.mjs"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

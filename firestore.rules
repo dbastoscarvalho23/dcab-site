@@ -1,0 +1,481 @@
+rules_version = '2';
+
+// Área reservada DCAB Consulting
+// Princípios: negar por omissão; exigir email/palavra-passe (por convite) ou Google + email verificado + segundo fator TOTP;
+// autorização explícita por email na coleção "acessos"; validação de esquema; auditoria só de escrita.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- Identidade e autorização ---------- */
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function autenticado() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider in ['google.com', 'password'];
+    }
+    function comMfa() {
+      return request.auth.token.firebase.sign_in_second_factor == 'totp';
+    }
+    function acesso() {
+      return get(/databases/$(database)/documents/acessos/$(email())).data;
+    }
+    function autorizado() {
+      return autenticado() && comMfa()
+        && exists(/databases/$(database)/documents/acessos/$(email()))
+        && acesso().ativo == true;
+    }
+    function editor() { return autorizado() && acesso().papel in ['admin', 'editor']; }
+    // Equipa DCAB (vê os projetos e todos os clientes). O papel «cliente» só vê a vigilância e os incidentes dos seus clientes.
+    function equipa() { return autorizado() && acesso().papel in ['admin', 'editor', 'leitor']; }
+    function clienteDe(cliente) {
+      return autorizado() && acesso().papel == 'cliente' && acesso().clientes is list && cliente in acesso().clientes;
+    }
+    function veCliente(cliente) { return equipa() || clienteDe(cliente); }
+    function admin()  { return autorizado() && acesso().papel == 'admin'; }
+    // Secções: o papel define o máximo; a lista «seccoes» do acesso restringe (sem lista: todas as do papel)
+    // O administrador tem todas as secções. Acesso de cliente sem lista (anterior às secções): só a vigilância.
+    // Recebe o documento de acesso já lido, para não repetir a leitura (limite de 1000 expressões por pedido).
+    function seccaoEm(a, s) {
+      return a.papel == 'admin'
+        || ((('seccoes' in a) && a.seccoes is list) ? s in a.seccoes : (a.papel != 'cliente' || s == 'vigilancia'));
+    }
+    function seccao(s) { return seccaoEm(acesso(), s); }
+    function equipaCand() { return equipa() && seccao('candidatura'); }
+    function editorCand() { return editor() && seccao('candidatura'); }
+
+    /* ---------- Validação ---------- */
+
+    function txt(v, max) { return v is string && v.size() <= max; }
+    function dataOuVazio(v) { return v is string && (v == '' || v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
+    function valor(v) { return v is number && v >= 0 && v < 100000000; }
+    function valorOuNulo(v) { return v == null || valor(v); }
+    function codigoPedido(v) { return v is string && v.matches('^(ADT|PSF|PP[0-9]{2}|AC[0-9]{2})$'); }
+    function carimbo(d) { return d.atualizadoPor == email() && d.atualizadoEm == request.time; }
+
+    function pedidoFechado(projeto, codigo) {
+      return codigo != ''
+        && exists(/databases/$(database)/documents/projetos/$(projeto)/pedidos/$(codigo))
+        && get(/databases/$(database)/documents/projetos/$(projeto)/pedidos/$(codigo)).data.estado
+             in ['Submetido', 'Em análise', 'Aprovado', 'Pago'];
+    }
+
+    function despesaValida(d) {
+      return d.keys().hasOnly(['linha', 'fornecedor', 'nif', 'documento', 'dataDocumento', 'mesReferencia', 'descricao',
+               'semIva', 'iva', 'ivaElegivel', 'dataPagamento', 'meioPagamento', 'pedido', 'estado', 'valorValidado',
+               'comprovativo', 'observacoes', 'ordem', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+        && d.linha in ['1.1', '1.2', '2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8',
+                       '3.1', '3.2', '3.3', '3.4', '3.5', '3.6', '3.7', '3.8', '4.1', '4.2', '5.1']
+        && txt(d.fornecedor, 150) && d.nif is string && (d.nif == '' || d.nif.matches('^[0-9]{9}$'))
+        && txt(d.documento, 60) && dataOuVazio(d.dataDocumento)
+        && d.mesReferencia is string && (d.mesReferencia == '' || d.mesReferencia.matches('^[0-9]{4}-[0-9]{2}$'))
+        && txt(d.descricao, 300) && valor(d.semIva) && valorOuNulo(d.iva) && d.ivaElegivel is bool
+        && dataOuVazio(d.dataPagamento)
+        && d.meioPagamento in ['', 'Transferência bancária', 'Débito direto', 'Cartão', 'Cheque', 'Processamento salarial', 'Outro']
+        && (d.pedido == '' || codigoPedido(d.pedido))
+        && d.estado in ['Lançada', 'Paga', 'Submetida em PP', 'Validada', 'Não elegível']
+        && valorOuNulo(d.valorValidado) && txt(d.comprovativo, 200) && txt(d.observacoes, 500)
+        && d.ordem is number && d.criadoPor is string && carimbo(d);
+    }
+
+    function pedidoValido(d) {
+      return d.keys().hasOnly(['tipo', 'periodoInicio', 'periodoFim', 'dataSubmissao', 'valorSolicitado',
+               'dataTransferencia', 'valorTransferido', 'estado', 'observacoes', 'atualizadoEm', 'atualizadoPor'])
+        && d.tipo in ['Adiantamento', 'Pedido de pagamento intercalar', 'Pedido de pagamento de saldo final', 'Reembolso / Acerto']
+        && dataOuVazio(d.periodoInicio) && dataOuVazio(d.periodoFim) && dataOuVazio(d.dataSubmissao)
+        && dataOuVazio(d.dataTransferencia) && valorOuNulo(d.valorSolicitado) && valorOuNulo(d.valorTransferido)
+        && d.estado in ['Em preparação', 'Submetido', 'Em análise', 'Aprovado', 'Pago', 'Com correções']
+        && txt(d.observacoes, 300) && carimbo(d);
+    }
+
+    // Taxas de comparticipação alteradas por rubrica: valores entre 0 e 1
+    function taxaOk(m, k) { return !(k in m) || (m[k] is number && m[k] >= 0 && m[k] <= 1); }
+    function taxasValidas(m) {
+      return m is map && m.keys().hasOnly(['1', '2', '3', '4', '5'])
+        && taxaOk(m, '1') && taxaOk(m, '2') && taxaOk(m, '3') && taxaOk(m, '4') && taxaOk(m, '5');
+    }
+
+    function parametrosValidos(d) {
+      return d.keys().hasOnly(['parametros', 'atualizadoEm', 'atualizadoPor'])
+        && d.parametros.keys().hasOnly(['entidade', 'projeto', 'inicio', 'duracao', 'entidadeConsultora', 'consultor1', 'consultor2', 'taxas'])
+        && (!('taxas' in d.parametros) || taxasValidas(d.parametros.taxas))
+        && txt(d.parametros.entidade, 120) && txt(d.parametros.projeto, 120) && dataOuVazio(d.parametros.inicio)
+        && d.parametros.duracao is int && d.parametros.duracao >= 1 && d.parametros.duracao <= 60
+        && txt(d.parametros.entidadeConsultora, 120) && txt(d.parametros.consultor1, 120) && txt(d.parametros.consultor2, 120)
+        && carimbo(d);
+    }
+
+    /* ---------- Coleções ---------- */
+
+    // Gerida apenas na consola Firebase. Cada utilizador só pode ler o seu próprio registo.
+    match /acessos/{conta} {
+      allow read: if autenticado() && conta == email();
+      allow write: if false;
+    }
+
+    match /projetos/{projeto} {
+      allow read: if equipaCand();
+      allow write: if admin() && parametrosValidos(request.resource.data);
+
+      match /despesas/{id} {
+        allow read: if equipaCand();
+        allow create: if editorCand()
+          && despesaValida(request.resource.data)
+          && request.resource.data.criadoPor == email()
+          && request.resource.data.criadoEm == request.time
+          && !pedidoFechado(projeto, request.resource.data.pedido);
+        allow update: if editorCand()
+          && despesaValida(request.resource.data)
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && request.resource.data.ordem == resource.data.ordem
+          && !pedidoFechado(projeto, resource.data.pedido)
+          && !pedidoFechado(projeto, request.resource.data.pedido);
+        allow delete: if admin() && !pedidoFechado(projeto, resource.data.pedido);
+      }
+
+      match /pedidos/{codigo} {
+        allow read: if equipaCand();
+        allow create: if admin() && codigoPedido(codigo) && pedidoValido(request.resource.data);
+        // Um pedido fechado só pode ser alterado (ou reaberto) pelo administrador
+        // O editor só altera pedidos abertos e só os pode deixar em preparação, submetidos ou com correções
+        allow update: if pedidoValido(request.resource.data)
+          && (admin() || (editorCand()
+                && !(resource.data.estado in ['Submetido', 'Em análise', 'Aprovado', 'Pago'])
+                && request.resource.data.estado in ['Em preparação', 'Submetido', 'Com correções']));
+        allow delete: if false;
+      }
+
+      // Registo de auditoria: só criação, pelo próprio utilizador, com hora do servidor
+      match /auditoria/{id} {
+        allow read: if admin();
+        allow create: if editorCand()
+          && request.resource.data.keys().hasOnly(['acao', 'colecao', 'docId', 'resumo', 'por', 'em'])
+          && request.resource.data.por == email()
+          && request.resource.data.em == request.time
+          && txt(request.resource.data.resumo, 200);
+        allow update, delete: if false;
+      }
+    }
+
+    /* ---------- Vigilância de exposição ----------
+     * Os alertas são criados só pelas funções do servidor (Hudson Rock, ransomware.live, HIBP), sem palavras-passe, cookies nem IP.
+     * A equipa (admin, editor) e os utilizadores do próprio cliente podem mudar o estado, a avaliação e as notas.
+     * Prazo de conservação: TTL no campo «expira», 36 meses após a deteção, fixado pelo servidor.
+     */
+    function alteracaoAlertaValida(d, antes) {
+      return d.diff(antes).affectedKeys().hasOnly(['estado', 'avaliacaoNotificacao', 'responsavel', 'notas', 'atualizadoEm', 'atualizadoPor'])
+        && d.estado in ['Novo', 'Em análise', 'Tratado', 'Falso positivo']
+        && d.avaliacaoNotificacao in ['Por avaliar', 'Não significativo', 'Notificado ao CNCS', 'Notificado à CNPD', 'Notificado ao CNCS e à CNPD']
+        && txt(d.responsavel, 120) && txt(d.notas, 1000)
+        && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+
+    function veVigilancia(cliente) { return veCliente(cliente) && seccao('vigilancia'); }
+
+    // Ficha do cliente: o administrador cria e altera o nome, o NIPC, os domínios de email e o identificador no CRM.
+    // A vigilância («ativo» e interno/config) continua a ser ligada na consola.
+    function fichaClienteValida(d) {
+      return d.nome is string && d.nome.size() > 0 && d.nome.size() <= 150
+        && (!('nipc' in d) || (d.nipc is string && (d.nipc == '' || d.nipc.matches('^[0-9]{9}$'))))
+        && (!('dominiosEmail' in d) || (d.dominiosEmail is list && d.dominiosEmail.size() <= 10))
+        && (!('crmEntidadeId' in d) || (d.crmEntidadeId is string && d.crmEntidadeId.size() <= 80))
+        && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+
+    match /clientes/{cliente} {
+      allow read: if veCliente(cliente) && (seccao('vigilancia') || seccao('incidentes') || seccao('vulnerabilidades'));
+      allow create: if admin() && cliente.matches('^[a-z0-9][a-z0-9-]{1,39}$')
+        && request.resource.data.keys().hasOnly(['nome', 'nipc', 'dominiosEmail', 'crmEntidadeId', 'ativo', 'servicoCve', 'criadoEm', 'atualizadoEm', 'atualizadoPor'])
+        && request.resource.data.ativo == false && request.resource.data.criadoEm == request.time
+        && (!('servicoCve' in request.resource.data) || request.resource.data.servicoCve is bool)
+        && fichaClienteValida(request.resource.data);
+      // «servicoCve» liga os alertas de vulnerabilidades do cliente (decisão comercial da DCAB)
+      allow update: if admin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome', 'nipc', 'dominiosEmail', 'crmEntidadeId', 'servicoCve', 'atualizadoEm', 'atualizadoPor'])
+        && (!('servicoCve' in request.resource.data) || request.resource.data.servicoCve is bool)
+        && fichaClienteValida(request.resource.data);
+      allow delete: if false;
+
+      // Configuração da recolha e identificadores dos registos nas fontes: só a equipa
+      match /interno/{d} {
+        allow read: if equipa() && seccao('vigilancia');
+        allow write: if false;
+      }
+      match /alertas_fonte/{alerta} {
+        allow read: if equipa() && seccao('vigilancia');
+        allow write: if false;
+      }
+
+      match /alertas/{alerta} {
+        allow read: if veVigilancia(cliente);
+        allow update: if seccao('vigilancia') && (editor() || clienteDe(cliente)) && alteracaoAlertaValida(request.resource.data, resource.data);
+        allow create, delete: if false;
+
+        match /historico/{h} {
+          allow read: if veVigilancia(cliente);
+          allow create: if seccao('vigilancia') && (editor() || clienteDe(cliente))
+            && request.resource.data.keys().hasOnly(['estado', 'avaliacaoNotificacao', 'notas', 'por', 'em', 'expira'])
+            && request.resource.data.por == email() && request.resource.data.em == request.time
+            // TTL: o histórico é apagado ~36 meses depois (o TTL do alerta não apaga subcoleções)
+            && request.resource.data.expira is timestamp
+            && request.resource.data.expira > request.time + duration.value(1090, 'd')
+            && request.resource.data.expira < request.time + duration.value(1100, 'd')
+            && exists(/databases/$(database)/documents/clientes/$(cliente)/alertas/$(alerta))
+            && request.resource.data.estado in ['Novo', 'Em análise', 'Tratado', 'Falso positivo']
+            && request.resource.data.avaliacaoNotificacao in ['Por avaliar', 'Não significativo', 'Notificado ao CNCS', 'Notificado à CNPD', 'Notificado ao CNCS e à CNPD']
+            && txt(request.resource.data.notas, 1000);
+          allow update, delete: if false;
+        }
+      }
+    }
+
+    /* ---------- Alertas de vulnerabilidades por fabricante ----------
+     * ativos: fabricantes e produtos do cliente (lista confidencial: mostra o que um atacante procuraria).
+     *   A equipa (admin, editor) e o próprio cliente registam; o leitor só consulta.
+     * preferencias/vulnerabilidades: avisos por email escolhidos pelo cliente.
+     * cves: vulnerabilidades que afetam os ativos, criadas só pelo servidor; equipa e cliente mudam o estado e as notas.
+     * Prazo de conservação dos alertas: TTL no campo «expira» (36 meses), fixado pelo servidor.
+     */
+    function papelCve(cliente) {
+      let a = acesso();
+      let ok = autenticado() && comMfa() && a.ativo == true && seccaoEm(a, 'vulnerabilidades');
+      return !ok ? ''
+        : a.papel in ['admin', 'editor'] ? 'edita'
+        : a.papel == 'leitor' ? 'le'
+        : (a.papel == 'cliente' && a.clientes is list && cliente in a.clientes) ? 'edita' : '';
+    }
+    function ativoValido(d) {
+      return d.keys().hasOnly(['fabricante', 'produto', 'versao', 'designacao', 'origem', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+        && d.fabricante is string && d.fabricante.matches('^[a-z0-9][a-z0-9-]{1,39}$')
+        && txt(d.produto, 80) && txt(d.versao, 40) && txt(d.designacao, 80)
+        && (d.origem in ['manual', 'lista'] || (d.origem == 'crm' && editor()))
+        && d.criadoPor is string && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+    function preferenciasCveValidas(d) {
+      return d.keys().hasOnly(['emailImediato', 'resumoDiario', 'omitirProduto', 'imediatoCriticas', 'atualizadoEm', 'atualizadoPor'])
+        && d.emailImediato is bool && d.resumoDiario is bool && d.omitirProduto is bool && d.imediatoCriticas is bool
+        && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+
+    match /clientes/{cliente}/ativos/{ativo} {
+      allow read: if papelCve(cliente) != '';
+      allow create: if papelCve(cliente) == 'edita' && ativoValido(request.resource.data)
+        && request.resource.data.criadoPor == email() && request.resource.data.criadoEm == request.time
+        && exists(/databases/$(database)/documents/clientes/$(cliente));
+      allow update: if papelCve(cliente) == 'edita' && ativoValido(request.resource.data)
+        && request.resource.data.criadoPor == resource.data.criadoPor && request.resource.data.criadoEm == resource.data.criadoEm;
+      allow delete: if papelCve(cliente) == 'edita';
+    }
+
+    match /clientes/{cliente}/preferencias/{d} {
+      allow read: if d == 'vulnerabilidades' && papelCve(cliente) != '';
+      allow write: if d == 'vulnerabilidades' && papelCve(cliente) == 'edita' && preferenciasCveValidas(request.resource.data);
+    }
+
+    match /clientes/{cliente}/cves/{cve} {
+      allow read: if papelCve(cliente) != '';
+      allow update: if papelCve(cliente) == 'edita'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'responsavel', 'notas', 'atualizadoEm', 'atualizadoPor'])
+        && request.resource.data.estado in ['Novo', 'Em análise', 'Corrigido', 'Mitigado', 'Não afetado', 'Risco aceite']
+        && txt(request.resource.data.responsavel, 120) && txt(request.resource.data.notas, 1000)
+        && request.resource.data.atualizadoPor == email() && request.resource.data.atualizadoEm == request.time;
+      allow create, delete: if false;
+    }
+
+    /* ---------- Incidentes ----------
+     * Um documento por incidente do cliente, com os dados das minutas e o registo de cada comunicação.
+     * A equipa (admin, editor) cria e edita; o cliente cria e só altera o registo das comunicações (notificacoes).
+     * A cronologia (eventos) só aceita criação, com a hora do servidor.
+     */
+    /* Limite do Firestore: 1000 expressões avaliadas por pedido. Cada texto de uma lista literal conta como uma expressão,
+     * por isso as listas fechadas de valores são verificadas com uma expressão regular (uma só expressão) e o registo
+     * das comunicações (notificacoes) só é validado quando muda. */
+    function emailOuVazio(v) { return v is string && v.size() <= 160 && (v == '' || v.matches('^[a-z0-9._%+-]{1,64}@[a-z0-9-]+([.][a-z0-9-]+)*[.][a-z]{2,}$')); }
+    function dataHora(v) { return v is string && (v == '' || v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$')); }
+    function simNao(v) { return v is string && v.matches('^(Em avaliação|Sim|Não)$'); }
+    function notifOk(m, k) {
+      return !(k in m) || (m[k] is map && m[k].keys().hasOnly(['estado', 'enviadaEm', 'referencia', 'por'])
+        && m[k].estado is string && m[k].estado.matches('^(Por enviar|Enviada|Não aplicável)$') && dataHora(m[k].enviadaEm)
+        && txt(m[k].referencia, 80) && txt(m[k].por, 160)
+        && (m[k].estado != 'Enviada' || m[k].enviadaEm != ''));
+    }
+    function notificacoesValidas(m) {
+      return m is map
+        && m.keys().hasOnly(['cncs-inicial', 'cncs-atualizacao', 'cncs-fim', 'cncs-final', 'cncs-intercalar', 'destinatarios', 'cnpd', 'titulares', 'registo-rgpd', 'dora', 'queixa', 'administracao'])
+        && notifOk(m, 'cncs-inicial') && notifOk(m, 'cncs-atualizacao') && notifOk(m, 'cncs-fim') && notifOk(m, 'cncs-final') && notifOk(m, 'cncs-intercalar')
+        && notifOk(m, 'destinatarios') && notifOk(m, 'cnpd') && notifOk(m, 'titulares') && notifOk(m, 'registo-rgpd')
+        && notifOk(m, 'dora') && notifOk(m, 'queixa') && notifOk(m, 'administracao');
+    }
+    // Todos os campos do incidente exceto o registo das comunicações (validado à parte, só quando muda)
+    function incidenteValido(d) {
+      return d.keys().hasOnly(['referencia', 'titulo', 'tipo', 'estado', 'detetadoEm', 'descricao', 'regimes', 'qualificacao', 'significativo',
+               'verificadoEm', 'fundamentacao', 'fimImpactoEm', 'suspeitaIlicito', 'transfronteirico', 'servicosAfetados', 'impacto', 'medidas',
+               'causa', 'iocs', 'dados', 'entidadeNome', 'nipc', 'contactos', 'notificacoes', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor',
+               'origem', 'responsavelDcab', 'contactosEmail', 'alertasEnviados', 'resumoEm', 'pastaId', 'pastaUrl', 'provasPastaId', 'provasPastaUrl', 'crm',
+               'partilhadaCom'])
+        && d.referencia is string && d.referencia.matches('^INC-[0-9]{4}-[0-9]{3}$')
+        && txt(d.titulo, 150) && d.titulo.size() > 0
+        && d.tipo is string && d.tipo.matches('^(Conteúdo abusivo|Código malicioso|Recolha de informação|Tentativa de intrusão|Intrusão|Disponibilidade|Segurança da informação|Fraude|Vulnerabilidade|Outro)$')
+        && d.estado is string && d.estado.matches('^(Por triar|Aberto|Contido|Erradicado|Recuperado|Encerrado)$')
+        && (!('origem' in d) || (d.origem is string && d.origem.matches('^(manual|formulario|crm)$')))
+        && (!('responsavelDcab' in d) || emailOuVazio(d.responsavelDcab))
+        && (!('contactosEmail' in d) || (d.contactosEmail is list && d.contactosEmail.size() <= 10))
+        && dataHora(d.detetadoEm) && d.detetadoEm != '' && txt(d.descricao, 3000)
+        && d.regimes is map && d.regimes.keys().hasOnly(['nis2', 'rgpd', 'dora'])
+        && d.regimes.nis2 is bool && d.regimes.rgpd is bool && d.regimes.dora is bool
+        && d.qualificacao is string && d.qualificacao.matches('^(Por confirmar|Entidade essencial|Entidade importante|Entidade pública relevante|Não abrangida pelo DL 125/2025)$')
+        && simNao(d.significativo) && dataHora(d.verificadoEm) && txt(d.fundamentacao, 2000) && dataHora(d.fimImpactoEm)
+        && simNao(d.suspeitaIlicito) && simNao(d.transfronteirico)
+        && txt(d.servicosAfetados, 1000) && txt(d.impacto, 2000) && txt(d.medidas, 3000) && txt(d.causa, 2000) && txt(d.iocs, 2000)
+        && d.dados is map && d.dados.keys().hasOnly(['pessoais', 'conhecimentoEm', 'risco', 'categorias', 'titulares'])
+        && simNao(d.dados.pessoais) && dataHora(d.dados.conhecimentoEm)
+        && d.dados.risco is string && d.dados.risco.matches('^(Por avaliar|Improvável|Risco|Risco elevado)$')
+        && txt(d.dados.categorias, 500) && txt(d.dados.titulares, 200)
+        && txt(d.entidadeNome, 150) && d.nipc is string && (d.nipc == '' || d.nipc.matches('^[0-9]{9}$'))
+        && d.contactos is map && d.contactos.keys().hasOnly(['responsavel', 'pontoContacto', 'epd'])
+        && txt(d.contactos.responsavel, 200) && txt(d.contactos.pontoContacto, 200) && txt(d.contactos.epd, 200)
+        && d.notificacoes is map
+        && d.criadoPor is string && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+    // O acesso é lido uma vez por função (let), em vez de uma vez por condição.
+    // Devolve 'edita' (admin, editor), 'le' (leitor), 'cliente' (cliente deste cliente) ou '' (sem acesso).
+    function papelIncidentes(cliente) {
+      let a = acesso();
+      let ok = autenticado() && comMfa() && a.ativo == true && seccaoEm(a, 'incidentes');
+      return !ok ? ''
+        : (a.papel == 'admin' || a.papel == 'editor') ? 'edita'
+        : a.papel == 'leitor' ? 'le'
+        : (a.papel == 'cliente' && a.clientes is list && cliente in a.clientes) ? 'cliente' : '';
+    }
+    function veIncidentes(cliente) { return papelIncidentes(cliente) != ''; }
+    function registaIncidentes(cliente) { let p = papelIncidentes(cliente); return p == 'edita' || p == 'cliente'; }
+
+    // Campos que só as funções do servidor escrevem (pasta no Google Drive, avisos enviados, ligação ao CRM)
+    function camposSistemaInc() { return ['alertasEnviados', 'resumoEm', 'pastaId', 'pastaUrl', 'provasPastaId', 'provasPastaUrl', 'crm', 'partilhadaCom']; }
+    // O cliente regista o incidente, mas não escolhe o responsável da DCAB, a origem nem quem recebe emails e acesso ao Drive
+    function criacaoPeloCliente(d) {
+      return (!('responsavelDcab' in d) || d.responsavelDcab == '')
+        && (!('origem' in d) || d.origem == 'manual')
+        && (!('contactosEmail' in d) || d.contactosEmail.size() == 0)
+        && (d.estado == 'Por triar' || d.estado == 'Aberto');
+    }
+    // Criação: o papel é lido uma vez; o registo das comunicações começa vazio
+    function criacaoIncidente(cliente, d) {
+      let p = papelIncidentes(cliente);
+      return (p == 'edita' || (p == 'cliente' && criacaoPeloCliente(d)))
+        && !d.keys().hasAny(camposSistemaInc())
+        && d.notificacoes is map && d.notificacoes.size() == 0
+        && incidenteValido(d)
+        && d.criadoPor == email() && d.criadoEm == request.time;
+    }
+    // Alteração: a equipa altera tudo menos os campos do sistema; o cliente só o registo das comunicações
+    function alteracaoIncidente(cliente, d, antes) {
+      let p = papelIncidentes(cliente);
+      let mudou = d.diff(antes).affectedKeys();
+      return d.criadoPor == antes.criadoPor && d.criadoEm == antes.criadoEm && d.referencia == antes.referencia
+        && (!mudou.hasAny(['notificacoes']) || notificacoesValidas(d.notificacoes))
+        && ((p == 'cliente' && mudou.hasOnly(['notificacoes', 'atualizadoEm', 'atualizadoPor'])
+              && d.atualizadoPor == email() && d.atualizadoEm == request.time)
+          || (p == 'edita' && !mudou.hasAny(camposSistemaInc().concat(['origem'])) && incidenteValido(d)));
+    }
+    function camposSistemaProva() { return ['pastaId', 'pastaUrl', 'lembreteEm', 'lembrete2h', 'escaladaEm', 'recebidaEm']; }
+    function provaValida(d, id) {
+      return d.keys().hasOnly(['numero', 'descricao', 'responsavelEmail', 'prazo', 'estado', 'notas', 'pastaId', 'pastaUrl', 'lembreteEm', 'lembrete2h',
+               'escaladaEm', 'recebidaEm', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'])
+        && id.matches('^P[0-9]{2}$') && d.numero == id
+        && txt(d.descricao, 300) && d.descricao.size() > 0
+        && emailOuVazio(d.responsavelEmail) && d.responsavelEmail != ''
+        && dataHora(d.prazo) && d.prazo != ''
+        && d.estado in ['Pedida', 'Recebida', 'Validada', 'Recusada', 'Anulada']
+        && txt(d.notas, 1000) && d.criadoPor is string
+        && d.atualizadoPor == email() && d.atualizadoEm == request.time;
+    }
+
+    match /clientes/{cliente}/incidentes/{inc} {
+      allow read: if veIncidentes(cliente);
+      allow create: if criacaoIncidente(cliente, request.resource.data)
+        && exists(/databases/$(database)/documents/clientes/$(cliente));
+      allow update: if alteracaoIncidente(cliente, request.resource.data, resource.data);
+      allow delete: if admin();
+
+      match /eventos/{evento} {
+        allow read: if veIncidentes(cliente);
+        allow create: if registaIncidentes(cliente)
+          && request.resource.data.keys().hasOnly(['texto', 'por', 'em'])
+          && request.resource.data.por == email() && request.resource.data.em == request.time
+          && txt(request.resource.data.texto, 1000) && request.resource.data.texto.size() > 0
+          && existsAfter(/databases/$(database)/documents/clientes/$(cliente)/incidentes/$(inc));
+        allow update, delete: if false;
+      }
+
+      // Provas pedidas ao cliente: a equipa pede, valida ou recusa; nunca se apagam (anulam-se).
+      // Os campos do sistema (pasta, lembretes) só podem ser retirados, para recomeçar os lembretes quando o prazo muda.
+      match /provas/{prova} {
+        allow read: if veIncidentes(cliente);
+        allow create: if papelIncidentes(cliente) == 'edita'
+          && !request.resource.data.keys().hasAny(camposSistemaProva())
+          && provaValida(request.resource.data, prova)
+          && request.resource.data.criadoPor == email() && request.resource.data.criadoEm == request.time
+          && existsAfter(/databases/$(database)/documents/clientes/$(cliente)/incidentes/$(inc));
+        allow update: if papelIncidentes(cliente) == 'edita'
+          && !request.resource.data.diff(resource.data).addedKeys().hasAny(camposSistemaProva())
+          && !request.resource.data.diff(resource.data).changedKeys().hasAny(camposSistemaProva().concat(['numero', 'criadoEm', 'criadoPor']))
+          && provaValida(request.resource.data, prova);
+        allow delete: if false;
+      }
+
+      // Ficheiros entregues no Google Drive: registados só pelo servidor (nome, tamanho, SHA-256)
+      match /ficheiros/{ficheiro} {
+        allow read: if veIncidentes(cliente);
+        allow write: if false;
+      }
+    }
+
+    /* ---------- Pedidos de apoio por triar ----------
+     * Chegam pelo formulário do site quando o remetente não corresponde a um cliente. A equipa converte-os em incidente
+     * de um cliente ou descarta-os. Criados só pelo servidor; apagados pelo TTL («expira», 12 meses).
+     */
+    match /pedidosIncidente/{pedido} {
+      allow read: if equipa() && seccao('incidentes');
+      allow update: if editor() && seccao('incidentes')
+        && resource.data.estado == 'Por triar'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'tratadoPor', 'tratadoEm', 'cliente', 'incidente'])
+        && request.resource.data.estado in ['Convertido', 'Descartado']
+        && request.resource.data.tratadoPor == email() && request.resource.data.tratadoEm == request.time
+        && (request.resource.data.estado == 'Descartado'
+            || (request.resource.data.cliente is string && request.resource.data.incidente is string
+                && existsAfter(/databases/$(database)/documents/clientes/$(request.resource.data.cliente)/incidentes/$(request.resource.data.incidente))));
+      allow create, delete: if false;
+    }
+
+    // Configuração dos incidentes: responsável por omissão e equipa que recebe os avisos
+    match /config/{d} {
+      allow read: if d == 'incidentes' && equipa() && seccao('incidentes');
+      allow write: if d == 'incidentes' && admin()
+        && request.resource.data.keys().hasOnly(['responsavelPadrao', 'equipaEmails', 'atualizadoEm', 'atualizadoPor'])
+        && emailOuVazio(request.resource.data.responsavelPadrao)
+        && request.resource.data.equipaEmails is list && request.resource.data.equipaEmails.size() <= 10
+        && request.resource.data.atualizadoPor == email() && request.resource.data.atualizadoEm == request.time;
+    }
+
+    /* ---------- Início: ligações para secções fora deste site ----------
+     * Ficam aqui, e não no código da página, para não serem públicas. Só a equipa lê; só o administrador altera.
+     * A página só mostra endereços https://.
+     */
+    match /portal/{d} {
+      allow read: if equipa() && d == 'ligacoes';
+      allow write: if admin() && d == 'ligacoes'
+        && request.resource.data.keys().hasOnly(['itens', 'atualizadoEm', 'atualizadoPor'])
+        && request.resource.data.itens is list && request.resource.data.itens.size() <= 12
+        && request.resource.data.atualizadoPor == email() && request.resource.data.atualizadoEm == request.time;
+    }
+
+    // Tudo o resto é negado
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}
