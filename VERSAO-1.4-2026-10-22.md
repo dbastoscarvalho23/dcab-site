@@ -6,7 +6,7 @@ Alertas de vulnerabilidades por fabricante na área reservada: o cliente indica 
 |---|---|
 | Versão | 1.4 |
 | Data | 22-10-2026 |
-| Estado | Pacote entregue; por publicar |
+| Estado | Publicada e validada a 22-10-2026 (versão 1.4.1) |
 | Pacote | `site-dcabconsulting-v1.4.zip` |
 | Publicação | `bash publicar.sh funcoes` + `Incidentes.gs` no Apps Script |
 | Guia | `GUIA-IMPLEMENTACAO-V1.4.md` |

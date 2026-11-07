@@ -29,6 +29,7 @@ for f in firebase.json firestore.rules .firebaserc \
          public/solucoes/prevencao-fuga-dados.html public/solucoes/classificacao-informacao.html \
          public/solucoes/continuidade-negocio.html public/solucoes/resposta-incidentes.html \
          public/solucoes/nis2-decreto-lei-125-2025.html public/solucoes/simulador-classificacao.html public/assets/js/simulador.js public/referencias.html public/assets/js/assunto.js \
+         public/assets/js/tema.js public/assets/js/interacao.js public/assets/fontes/ibm-plex-mono-latin-400-normal.woff \
          public/reservado/index.html public/reservado/app.js public/reservado/arranque.js \
          public/reservado/config.js public/reservado/modelo.js public/reservado/incidentes.js public/reservado/cve.js public/reservado/reservado.css \
          public/reservado/vendor/pdf.min.mjs public/reservado/vendor/pdf.worker.min.mjs; do
@@ -62,6 +63,11 @@ for f in public/reservado/vendor/qrcode.min.js public/reservado/vendor/xlsx.full
   [ -s "$f" ] || falha "Falta $f. Execute primeiro: bash obter-bibliotecas.sh"
 done
 ok "Todos os ficheiros presentes"
+for f in public/index.html public/privacidade.html public/referencias.html public/solucoes/*.html; do
+  grep -q 'data-tema' "$f" || falha "$f não tem o aspeto da versão 1.5 (botão do tema). Execute: python3 ferramentas/aplicar_v15.py"
+done
+grep -q 'data-demo-dlp' public/index.html || falha "A página inicial não tem a demonstração de prevenção de fuga de dados. Execute: python3 ferramentas/aplicar_v15.py"
+ok "Aspeto da versão 1.5 presente em todas as páginas"
 
 command -v node >/dev/null 2>&1 || falha "O Node.js não está instalado (guia, passo 4)."
 node -e "JSON.parse(require('fs').readFileSync('firebase.json','utf8'))" 2>/dev/null || falha "firebase.json tem um erro de formato."

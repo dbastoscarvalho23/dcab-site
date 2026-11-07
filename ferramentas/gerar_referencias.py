@@ -4,7 +4,7 @@ from comum import cabeca, topo, rodape, SITE
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent / "public"
 URL = SITE + "/referencias"
-REVISAO = "19 de outubro de 2026"
+REVISAO = "6 de novembro de 2026"
 DESCRICAO = ("Diplomas, normas e versões usados no site da DCAB Consulting, no Observatório, no detetor de informação "
              "sensível e no simulador de classificação, com a situação e a data da última revisão.")
 
@@ -50,7 +50,8 @@ DIPLOMAS = [
 ]
 
 NORMAS = [
-    ("ISO/IEC 27001:2022", "Anexo A, controlos 5.12, 5.13, 5.17 e 8.8, entre outros", "Observatório, simulador, páginas de soluções"),
+    ("ISO/IEC 27001:2022", "Anexo A, controlos 5.9, 5.10, 5.12, 5.13, 5.15, 5.17, 5.24 a 5.28, 5.30, 8.8, 8.12, 8.13 e 8.24, entre outros", "Observatório, simulador, página inicial e páginas de soluções"),
+    ("ISO 22301:2019", "Sistemas de gestão da continuidade de negócio", "Página inicial e página de continuidade de negócio"),
     ("Taxonomia Comum da Rede Nacional de CSIRT", "Versão 3.3, dezembro de 2023", "Observatório (tipo de incidente de cada falha)"),
     ("OSCAL (NIST)", "Versão 1.2.0; esquemas JSON oficiais", "Exportação dos resultados do Observatório"),
     ("Have I Been Pwned, API", "Versão 3; dados sob licença CC BY 4.0", "Consulta de fugas e vigilância"),
@@ -64,18 +65,21 @@ NORMAS = [
 ]
 
 VERSOES = [
-    ("Observatório de Exposição Digital", "1.3", "22-10-2026", "Novo endereço: observatorio.dcabconsulting.com"),
+    ("Site dcabconsulting.com", "1.5", "06-11-2026", "Tema claro e escuro, marcação de classificação, referências normativas nas soluções, demonstração de prevenção de fuga de dados e escala de classificação"),
+    ("Observatório de Exposição Digital (aspeto)", "1.4", "06-11-2026", "Tema claro e escuro e marcação de classificação, alinhados com o site; o motor de análise não muda"),
+    ("Observatório de Exposição Digital (endereço)", "1.3", "22-10-2026", "Novo endereço: observatorio.dcabconsulting.com"),
     ("Observatório de Exposição Digital (funções)", "1.2", "20-10-2026", "Nível de proteção de 0 a 5 (5 é o melhor), prazo de autoidentificação NIS2 com fonte, contadores diários de utilização sem dados pessoais"),
     ("Detetor de informação sensível", "1.2", "20-10-2026", "Leitura de PDF com o pdf.js alojado no próprio site, sem pedidos de rede durante a análise; resultado construído sem HTML injetado"),
     ("Simulador de classificação", "1.0", "16-10-2026", "Dez casos fictícios"),
     ("Catálogo de controlos do Observatório", "1.1", "17-10-2026", "Impacto, esforço e responsável típico por verificação"),
     ("Área reservada", "1.4", "22-10-2026", "Alertas de vulnerabilidades por fabricante: catálogo de 16 fabricantes, lista de ativos com produto e versão, correspondência com a lista CVE, o NVD, o KEV, o EPSS e a EUVD, email imediato e resumo diário"),
     ("Área reservada (incidentes)", "1.3", "19-10-2026", "Incidentes abertos pelo formulário do site ou pelo CRM, pedidos por triar, provas entregues no Google Drive com SHA-256, avisos de prazos e lembretes por email, fichas de cliente"),
-    ("Site dcabconsulting.com", "1.4.1", "22-10-2026", "Política de privacidade: alertas de vulnerabilidades; ligações para o novo endereço do Observatório"),
+    ("Site dcabconsulting.com (privacidade)", "1.4.1", "22-10-2026", "Política de privacidade: alertas de vulnerabilidades; ligações para o novo endereço do Observatório"),
     ("Site dcabconsulting.com (formulário e rodapé)", "1.3", "19-10-2026", "Pedido de apoio urgente a incidentes no formulário; identificação legal completa no rodapé (CSC, art. 171.º); política de privacidade revista"),
 ]
 
 ALTERACOES = [
+    ("06-11-2026", "Versão 1.5", "Novo aspeto no site e no Observatório: tema claro e escuro, que segue o sistema ou a escolha feita no botão do cabeçalho; marcação «Classificação: Público» no topo e no rodapé; referência normativa em cada solução; demonstração de prevenção de fuga de dados com dados fictícios, que corre só no navegador; escala de classificação com os quatro níveis. A escolha do tema fica guardada só no navegador. Política de privacidade: escolha do tema."),
     ("22-10-2026", "Versão 1.4.1", "O Observatório passa para observatorio.dcabconsulting.com. O endereço antigo (diagnostico.dcabconsulting.com) redireciona para o novo. Área reservada: corrigido o registo de incidentes pelo cliente e pela equipa com responsável e contactos, que as regras recusavam por excederem o limite de 1000 expressões avaliadas do Firestore."),
     ("22-10-2026", "Versão 1.4", "Alertas de vulnerabilidades por fabricante na área reservada: o cliente escolhe os fabricantes ou importa a lista de ativos (fabricante, produto, versão); de 15 em 15 minutos, as vulnerabilidades novas da lista CVE, do NVD, do KEV e da EUVD, e diariamente o EPSS, são cruzadas com essa lista. Email imediato para as exploradas e as críticas com probabilidade alta de exploração; resumo diário das altas e críticas. Nenhum dado de cliente é enviado às fontes. Política de privacidade: alertas de vulnerabilidades."),
     ("20-10-2026", "Observatório 1.2", "Índices passam a «nível de proteção» de 0 a 5 («Proteção de terceiros» e «Proteção da própria organização»), com 5 como o melhor valor. Prazo de autoidentificação no MyCiber com fonte: 60 dias úteis a contar de 23-06-2026, terminado a 15-09-2026. Detetor lê PDF com texto, no navegador. Contadores diários de utilização sem cookies nem identificadores. Política de privacidade: contadores."),
@@ -94,7 +98,7 @@ JSONLD = {
     "@context": "https://schema.org",
     "@graph": [
         {"@type": "WebPage", "@id": URL + "#pagina", "url": URL, "name": "Referências e versão", "description": DESCRICAO,
-         "inLanguage": "pt-PT", "dateModified": "2026-10-18",
+         "inLanguage": "pt-PT", "dateModified": "2026-11-06",
          "publisher": {"@type": "Organization", "@id": SITE + "/#organizacao", "name": "DCAB Consulting", "url": SITE + "/"}},
         {"@type": "BreadcrumbList", "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": "Início", "item": SITE + "/"},
@@ -114,6 +118,10 @@ html = cabeca("Referências e versão | DCAB Consulting", DESCRICAO, "/referenci
     </section>
 
     <article class="bloco__interior pagina-corpo pagina-corpo--largo">
+      <div class="nota-referencias">
+        <p>As referências que aparecem nas soluções (por exemplo, «ISO/IEC 27001 A.8.12» ou «NIS2 art. 23.º») indicam a norma ou o artigo a que cada serviço responde. Não significam que a DCAB Consulting ou os seus clientes estejam certificados por essas normas.</p>
+      </div>
+
       <h2>Diplomas</h2>
       <div class="tabela-envolvente"><table class="tabela-conteudo">
         <thead><tr><th scope="col">Diploma</th><th scope="col">Publicação</th><th scope="col">Situação</th><th scope="col">Onde é usado</th></tr></thead>

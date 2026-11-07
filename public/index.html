@@ -22,9 +22,11 @@
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <link rel="preload" href="/assets/fontes/jost-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fontes/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261017">
+  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261106">
   <script src="/assets/js/menu.js"></script>
+  <script src="/assets/js/tema.js"></script>
   <script src="/assets/js/principal.js" defer></script>
+  <script src="/assets/js/interacao.js" defer></script>
   <script src="/assets/js/abertura.js" defer></script>
   <script src="/assets/js/assunto.js" defer></script>
   <script type="application/ld+json">
@@ -150,6 +152,7 @@
 <body>
   <a class="saltar" href="#conteudo">Saltar para o conteúdo</a>
 
+  <div class="classificacao"><div class="classificacao__interior"><span>Classificação: <b>Público</b></span><span>DCAB Consulting · Segurança da informação</span></div></div>
   <header class="topo">
     <div class="topo__interior">
       <a class="topo__marca" href="/" aria-label="DCAB Consulting, página inicial">
@@ -165,6 +168,7 @@
         <a class="topo__destaque" href="#ankoraone">AnkoraOne</a>
         <a class="topo__contacto" href="#contacto">Pedir contacto</a>
       </nav>
+      <button class="tema" type="button" data-tema hidden aria-pressed="false" aria-label="Mudar para o tema escuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><span>Tema escuro</span></button>
       <a class="botao botao--pequeno" href="#contacto">Pedir contacto</a>
     </div>
   </header>
@@ -193,11 +197,11 @@
     <!-- Atalhos -->
     <nav class="atalhos" aria-label="Áreas de atuação">
       <div class="atalhos__interior">
-        <a class="atalho--ankora" href="#ankoraone"><strong>AnkoraOne</strong><span>A plataforma de governação, risco e conformidade da DCAB</span></a>
-        <a href="/solucoes/prevencao-fuga-dados"><strong>Prevenção de fuga de dados</strong><span>Controlo da informação que sai da organização</span></a>
-        <a href="/solucoes/classificacao-informacao"><strong>Classificação da informação</strong><span>Etiquetas que acompanham cada documento</span></a>
-        <a href="/solucoes/continuidade-negocio"><strong>Continuidade de negócio</strong><span>Recuperação depois de um incidente</span></a>
-        <a href="/solucoes/nis2-decreto-lei-125-2025"><strong>NIS2 e DL 125/2025</strong><span>Passos para cumprir o regime jurídico da cibersegurança</span></a>
+        <a class="atalho--ankora" href="#ankoraone"><strong>AnkoraOne</strong><span>A plataforma de governação, risco e conformidade da DCAB</span><span class="ref">SaaS · nove módulos</span></a>
+        <a href="/solucoes/prevencao-fuga-dados"><strong>Prevenção de fuga de dados</strong><span>Controlo da informação que sai da organização</span><span class="ref">ISO/IEC 27001 A.8.12</span></a>
+        <a href="/solucoes/classificacao-informacao"><strong>Classificação da informação</strong><span>Etiquetas que acompanham cada documento</span><span class="ref">ISO/IEC 27001 A.5.12</span></a>
+        <a href="/solucoes/continuidade-negocio"><strong>Continuidade de negócio</strong><span>Recuperação depois de um incidente</span><span class="ref">ISO 22301</span></a>
+        <a href="/solucoes/nis2-decreto-lei-125-2025"><strong>NIS2 e DL 125/2025</strong><span>Passos para cumprir o regime jurídico da cibersegurança</span><span class="ref">DL 125/2025</span></a>
       </div>
     </nav>
 
@@ -274,6 +278,42 @@
       </div>
     </section>
 
+    <!-- Demonstração de prevenção de fuga de dados (v1.5) -->
+    <section class="demo" id="demonstracao" aria-labelledby="demo-titulo" data-demo-dlp>
+      <div class="bloco__interior demo__interior">
+        <div class="demo__texto">
+          <span class="ref">Prevenção de fuga de dados · ISO/IEC 27001 A.8.12</span>
+          <h2 id="demo-titulo">Veja o que acontece a um email confidencial</h2>
+          <p>Uma política de prevenção de fuga de dados analisa o conteúdo antes de a mensagem sair. Escolha o destinatário e envie: a mesma mensagem tem um resultado diferente consoante fique dentro ou saia da organização.</p>
+          <fieldset class="demo__destinos">
+            <legend>Destinatário</legend>
+            <label class="demo__destino"><input type="radio" name="demo-destino" value="interno" data-endereco="a.costa@empresa-exemplo.pt"><span>Colega da direção financeira<small>a.costa@empresa-exemplo.pt</small></span></label>
+            <label class="demo__destino"><input type="radio" name="demo-destino" value="externo" data-endereco="a.costa.pessoal@correio-exemplo.com" checked><span>Endereço pessoal, fora da organização<small>a.costa.pessoal@correio-exemplo.com</small></span></label>
+          </fieldset>
+          <div class="demo__acoes">
+            <button class="botao botao--claro" type="button" data-demo-enviar>Enviar email</button>
+            <p class="demo__aviso">Dados fictícios. Nada é enviado.</p>
+          </div>
+        </div>
+        <figure class="email" aria-label="Email de exemplo com informação confidencial">
+          <div class="email__barra"><span>Nova mensagem</span><span class="email__etiqueta">Confidencial</span></div>
+          <dl class="email__campos">
+            <div><dt>Para</dt><dd data-demo-para>a.costa.pessoal@correio-exemplo.com</dd></div>
+            <div><dt>Assunto</dt><dd>Proposta revista e dados de faturação</dd></div>
+            <div><dt>Anexo</dt><dd>proposta_cliente_v3.docx</dd></div>
+          </dl>
+          <div class="email__corpo">
+            <div class="email__varrimento" aria-hidden="true"></div>
+            <span class="email__carimbo" aria-hidden="true"></span>
+            <p>Bom dia,</p>
+            <p>Segue a proposta revista. Para a faturação, use o NIF <span class="sensivel">999 999 990</span> e o IBAN <span class="sensivel">PT50 0000 0000 0000 0000 0000 0</span>.</p>
+            <p>Acesso temporário ao portal: <span class="sensivel">m.silva</span> com a palavra-passe <span class="sensivel">Exemplo#2026</span>.</p>
+          </div>
+          <div class="email__registo" aria-live="polite"><p>O registo da política aparece aqui depois do envio.</p></div>
+        </figure>
+      </div>
+    </section>
+
     <!-- Soluções: preto e azul sobre branco -->
     <section class="bloco" id="solucoes" aria-labelledby="solucoes-titulo">
       <div class="bloco__interior">
@@ -296,23 +336,23 @@
           </div>
           <dl class="componentes">
             <div class="componentes__destaque">
-              <dt>Prevenção de fuga de dados (DLP)</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.8.12</span>Prevenção de fuga de dados (DLP)</dt>
               <dd>Políticas que detetam e bloqueiam o envio de informação sensível por email, pela web, em aplicações cloud ou para dispositivos externos.</dd>
             </div>
             <div>
-              <dt>Descoberta de dados sensíveis</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.5.9</span>Descoberta de dados sensíveis</dt>
               <dd>Levantamento da informação crítica guardada em servidores, repositórios de documentos e serviços cloud.</dd>
             </div>
             <div>
-              <dt>Classificação e rotulagem</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.5.12 e A.5.13</span>Classificação e rotulagem</dt>
               <dd>Esquemas de classificação definidos para cada organização. A etiqueta é aplicada automaticamente ou pelo utilizador e acompanha o documento.</dd>
             </div>
             <div>
-              <dt>Proteção da informação interna</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.5.15 e A.8.24</span>Proteção da informação interna</dt>
               <dd>Controlo de acessos, cifragem e gestão de direitos sobre documentos, incluindo quando são partilhados com o exterior.</dd>
             </div>
             <div>
-              <dt>Informação e inteligência artificial</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.5.10</span>Informação e inteligência artificial</dt>
               <dd>Regras sobre a informação que pode ser usada em ferramentas de IA generativa e controlo do que lhes é enviado.</dd>
             </div>
           </dl>
@@ -330,23 +370,40 @@
           </div>
           <dl class="componentes">
             <div>
-              <dt>Planos de continuidade e recuperação</dt>
+              <dt><span class="ref">ISO 22301</span>Planos de continuidade e recuperação</dt>
               <dd>Análise de impacto no negócio e planos de continuidade e recuperação segundo a ISO 22301, com tempos de recuperação definidos.</dd>
             </div>
             <div>
-              <dt>Cópias de segurança protegidas</dt>
+              <dt><span class="ref">ISO/IEC 27001 A.8.13</span>Cópias de segurança protegidas</dt>
               <dd>Cópias de segurança isoladas e imutáveis, preparadas para resistir a ataques de ransomware.</dd>
             </div>
             <div>
-              <dt>Resposta a incidentes</dt>
+              <dt><span class="ref">NIS2 art. 23.º</span>Resposta a incidentes</dt>
               <dd>Contenção e investigação de incidentes e fugas de informação, e notificação às autoridades quando é obrigatória.</dd>
             </div>
             <div>
-              <dt>Adequação à NIS2</dt>
+              <dt><span class="ref">NIS2 art. 21.º · DL 125/2025</span>Adequação à NIS2</dt>
               <dd>Qualificação da entidade, designação de responsáveis e aplicação das medidas do nível atribuído, registadas na AnkoraOne.</dd>
             </div>
           </dl>
         </article>
+
+        <div class="escala-bloco" id="niveis-classificacao">
+          <h3>Cada documento com o nível de proteção certo</h3>
+          <p>A classificação decide quem pode ver, partilhar ou enviar cada documento, e é ela que a política de prevenção de fuga de dados lê. Escolha um nível para ver o que muda.</p>
+          <div class="escala" role="group" aria-label="Níveis de classificação" data-escala>
+            <button class="escala__nivel escala__nivel--publico" type="button" data-nivel="publico" aria-pressed="false"><span class="escala__barra"></span><span class="escala__nome">Público</span></button>
+            <button class="escala__nivel escala__nivel--interno" type="button" data-nivel="interno" aria-pressed="false"><span class="escala__barra"></span><span class="escala__nome">Interno</span></button>
+            <button class="escala__nivel escala__nivel--confidencial" type="button" data-nivel="confidencial" aria-pressed="true"><span class="escala__barra"></span><span class="escala__nome">Confidencial</span></button>
+            <button class="escala__nivel escala__nivel--restrito" type="button" data-nivel="restrito" aria-pressed="false"><span class="escala__barra"></span><span class="escala__nome">Restrito</span></button>
+          </div>
+          <dl class="escala__detalhe" aria-live="polite">
+            <div><dt>Quem pode ver</dt><dd>Equipas e pessoas autorizadas.</dd></div>
+            <div><dt>Exemplos</dt><dd>Propostas a clientes, contratos, dados de faturação.</dd></div>
+            <div><dt>Controlos aplicados</dt><dd>Cifragem, bloqueio de envio para domínios externos e registo de acessos.</dd></div>
+          </dl>
+          <p class="escala__rodape">Os níveis e os controlos são exemplos: cada organização define os seus. Treine a escolha no <a href="/solucoes/simulador-classificacao">simulador de classificação</a>.</p>
+        </div>
       </div>
 
       <div class="bloco__interior ferramentas">
@@ -499,6 +556,8 @@
         <p>Sede: Urbanização do Torrão, n.º 66, 4825-458 Água Longa</p>
         <p>Matriculada na Conservatória do Registo Comercial de Coimbra · matrícula e NIPC 518&nbsp;180&nbsp;964</p>
       </div>
+    
+      <p class="rodape__classificacao">Classificação: <b>Público</b> · Informação de divulgação livre</p>
     </div>
   </footer>
 </body>

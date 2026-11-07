@@ -22,8 +22,9 @@
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <link rel="preload" href="/assets/fontes/jost-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fontes/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261017">
+  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261106">
   <script src="/assets/js/menu.js"></script>
+  <script src="/assets/js/tema.js"></script>
   <script src="/assets/js/principal.js" defer></script>
   <script src="/assets/js/simulador.js" defer></script>
   <script type="application/ld+json">
@@ -79,6 +80,7 @@
 <body>
   <a class="saltar" href="#conteudo">Saltar para o conteúdo</a>
 
+  <div class="classificacao"><div class="classificacao__interior"><span>Classificação: <b>Público</b></span><span>DCAB Consulting · Segurança da informação</span></div></div>
   <header class="topo">
     <div class="topo__interior">
       <a class="topo__marca" href="/" aria-label="DCAB Consulting, página inicial">
@@ -94,6 +96,7 @@
         <a class="topo__destaque" href="/#ankoraone">AnkoraOne</a>
         <a class="topo__contacto" href="/#contacto">Pedir contacto</a>
       </nav>
+      <button class="tema" type="button" data-tema hidden aria-pressed="false" aria-label="Mudar para o tema escuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><span>Tema escuro</span></button>
       <a class="botao botao--pequeno" href="/#contacto">Pedir contacto</a>
     </div>
   </header>
@@ -102,6 +105,7 @@
     <section class="pagina-cabeca pagina-cabeca--azul">
       <div class="bloco__interior">
         <nav class="migalhas" aria-label="Localização"><a href="/">Início</a> <span aria-hidden="true">›</span> <a href="/solucoes/classificacao-informacao">Classificação da informação</a> <span aria-hidden="true">›</span> <span aria-current="page">Simulador</span></nav>
+        <p class="ref-normativa">Referências: ISO/IEC 27001 A.5.12 e A.5.13</p>
         <h1>Simulador de classificação da informação</h1>
         <p class="pagina-cabeca__intro">Dez documentos do dia a dia de uma empresa fictícia. Para cada um, escolha o nível de classificação e o que faria numa situação concreta. No fim vê a pontuação e onde vale a pena rever as regras. Demora cerca de cinco minutos.</p>
         <a class="botao" href="#simulador">Começar o simulador</a>
@@ -176,6 +180,8 @@
         <p>Sede: Urbanização do Torrão, n.º 66, 4825-458 Água Longa</p>
         <p>Matriculada na Conservatória do Registo Comercial de Coimbra · matrícula e NIPC 518&nbsp;180&nbsp;964</p>
       </div>
+    
+      <p class="rodape__classificacao">Classificação: <b>Público</b> · Informação de divulgação livre</p>
     </div>
   </footer>
 </body>

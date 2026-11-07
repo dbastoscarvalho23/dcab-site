@@ -22,9 +22,11 @@
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <link rel="preload" href="/assets/fontes/jost-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fontes/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261017">
+  <link rel="stylesheet" href="/assets/css/estilo.css?v=20261106">
   <script src="/assets/js/menu.js"></script>
+  <script src="/assets/js/tema.js"></script>
   <script src="/assets/js/principal.js" defer></script>
+  <script src="/assets/js/interacao.js" defer></script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -105,6 +107,7 @@
 <body>
   <a class="saltar" href="#conteudo">Saltar para o conteúdo</a>
 
+  <div class="classificacao"><div class="classificacao__interior"><span>Classificação: <b>Público</b></span><span>DCAB Consulting · Segurança da informação</span></div></div>
   <header class="topo">
     <div class="topo__interior">
       <a class="topo__marca" href="/" aria-label="DCAB Consulting, página inicial">
@@ -120,6 +123,7 @@
         <a class="topo__destaque" href="/#ankoraone">AnkoraOne</a>
         <a class="topo__contacto" href="/#contacto">Pedir contacto</a>
       </nav>
+      <button class="tema" type="button" data-tema hidden aria-pressed="false" aria-label="Mudar para o tema escuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><span>Tema escuro</span></button>
       <a class="botao botao--pequeno" href="/#contacto">Pedir contacto</a>
     </div>
   </header>
@@ -128,6 +132,7 @@
     <section class="pagina-cabeca">
       <div class="bloco__interior">
         <nav class="migalhas" aria-label="Localização"><a href="/">Início</a> <span aria-hidden="true">›</span> <a href="/#solucoes">Soluções</a> <span aria-hidden="true">›</span> <span aria-current="page">Prevenção de fuga de dados</span></nav>
+        <p class="ref-normativa">Referências: ISO/IEC 27001 A.8.12 · RGPD art. 32.º</p>
         <h1>Prevenção de fuga de dados (DLP)</h1>
         <p class="pagina-cabeca__intro">A prevenção de fuga de dados, conhecida pela sigla inglesa DLP (<em>Data Loss Prevention</em>), reúne as políticas e as ferramentas que detetam informação sensível e impedem que saia da organização por canais não autorizados. A DCAB Consulting implementa a DLP em organizações privadas e públicas, desde o levantamento inicial até à afinação das regras em produção.</p>
         <a class="botao botao--claro" href="/#contacto">Pedir contacto</a>
@@ -165,6 +170,42 @@
       <details class="faq"><summary>Funciona com o Microsoft 365 e o Google Workspace?</summary><p>Ambas as plataformas incluem funcionalidades de DLP em determinadas licenças. Antes de propor ferramentas adicionais, avaliamos o que a organização já tem disponível.</p></details>
       <details class="faq"><summary>Qual é a relação com a classificação da informação?</summary><p>As etiquetas de classificação tornam as regras de DLP mais simples e mais precisas. Um documento marcado como confidencial pode ter regras próprias, independentemente do conteúdo que a ferramenta consiga reconhecer.</p></details>
     </article>
+
+    <!-- Demonstração de prevenção de fuga de dados (v1.5) -->
+    <section class="demo" id="demonstracao" aria-labelledby="demo-titulo" data-demo-dlp>
+      <div class="bloco__interior demo__interior">
+        <div class="demo__texto">
+          <span class="ref">Prevenção de fuga de dados · ISO/IEC 27001 A.8.12</span>
+          <h2 id="demo-titulo">Veja o que acontece a um email confidencial</h2>
+          <p>Uma política de prevenção de fuga de dados analisa o conteúdo antes de a mensagem sair. Escolha o destinatário e envie: a mesma mensagem tem um resultado diferente consoante fique dentro ou saia da organização.</p>
+          <fieldset class="demo__destinos">
+            <legend>Destinatário</legend>
+            <label class="demo__destino"><input type="radio" name="demo-destino" value="interno" data-endereco="a.costa@empresa-exemplo.pt"><span>Colega da direção financeira<small>a.costa@empresa-exemplo.pt</small></span></label>
+            <label class="demo__destino"><input type="radio" name="demo-destino" value="externo" data-endereco="a.costa.pessoal@correio-exemplo.com" checked><span>Endereço pessoal, fora da organização<small>a.costa.pessoal@correio-exemplo.com</small></span></label>
+          </fieldset>
+          <div class="demo__acoes">
+            <button class="botao botao--claro" type="button" data-demo-enviar>Enviar email</button>
+            <p class="demo__aviso">Dados fictícios. Nada é enviado.</p>
+          </div>
+        </div>
+        <figure class="email" aria-label="Email de exemplo com informação confidencial">
+          <div class="email__barra"><span>Nova mensagem</span><span class="email__etiqueta">Confidencial</span></div>
+          <dl class="email__campos">
+            <div><dt>Para</dt><dd data-demo-para>a.costa.pessoal@correio-exemplo.com</dd></div>
+            <div><dt>Assunto</dt><dd>Proposta revista e dados de faturação</dd></div>
+            <div><dt>Anexo</dt><dd>proposta_cliente_v3.docx</dd></div>
+          </dl>
+          <div class="email__corpo">
+            <div class="email__varrimento" aria-hidden="true"></div>
+            <span class="email__carimbo" aria-hidden="true"></span>
+            <p>Bom dia,</p>
+            <p>Segue a proposta revista. Para a faturação, use o NIF <span class="sensivel">999 999 990</span> e o IBAN <span class="sensivel">PT50 0000 0000 0000 0000 0000 0</span>.</p>
+            <p>Acesso temporário ao portal: <span class="sensivel">m.silva</span> com a palavra-passe <span class="sensivel">Exemplo#2026</span>.</p>
+          </div>
+          <div class="email__registo" aria-live="polite"><p>O registo da política aparece aqui depois do envio.</p></div>
+        </figure>
+      </div>
+    </section>
 
     <section class="na-ankora" aria-labelledby="na-ankora-titulo">
       <div class="bloco__interior na-ankora__interior">
@@ -234,6 +275,8 @@
         <p>Sede: Urbanização do Torrão, n.º 66, 4825-458 Água Longa</p>
         <p>Matriculada na Conservatória do Registo Comercial de Coimbra · matrícula e NIPC 518&nbsp;180&nbsp;964</p>
       </div>
+    
+      <p class="rodape__classificacao">Classificação: <b>Público</b> · Informação de divulgação livre</p>
     </div>
   </footer>
 </body>
