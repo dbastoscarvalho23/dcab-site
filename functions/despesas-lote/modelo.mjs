@@ -1,7 +1,9 @@
 // Leitura de uma fatura com um modelo na Vertex AI (europe-west1).
 // Sem SDK: token pela conta de serviço da função (servidor de metadados) e REST.
 
-export const MODELO_POR_OMISSAO = 'gemini-2.5-flash';
+export const MODELO_POR_OMISSAO = 'gemini-3.5-flash';
+// Região por omissão do modelo: o gemini-3.5-flash responde ao projeto em europe-west3 (Frankfurt), na UE.
+export const REGIAO_MODELO_POR_OMISSAO = 'europe-west3';
 
 // Esquema de saída (subconjunto OpenAPI aceite pela Vertex AI).
 export function esquemaLeitura(codigosRubricas) {
@@ -59,7 +61,7 @@ async function tokenAcesso() {
   return (await r.json()).access_token;
 }
 
-export async function lerComModelo({ bytes, mimeType, rubricas, projeto, regiao = 'europe-west1', modelo = MODELO_POR_OMISSAO, fetchFn = fetch, token }) {
+export async function lerComModelo({ bytes, mimeType, rubricas, projeto, regiao = REGIAO_MODELO_POR_OMISSAO, modelo = MODELO_POR_OMISSAO, fetchFn = fetch, token }) {
   const url = `https://${regiao}-aiplatform.googleapis.com/v1/projects/${projeto}/locations/${regiao}/publishers/google/models/${modelo}:generateContent`;
   const corpo = {
     contents: [{ role: 'user', parts: [
@@ -67,7 +69,8 @@ export async function lerComModelo({ bytes, mimeType, rubricas, projeto, regiao 
       { text: instrucoes(rubricas) },
     ] }],
     generationConfig: {
-      temperature: 0,
+      // Os modelos Gemini 3 recomendam a temperatura por omissão; os anteriores leem melhor com 0.
+      ...(/^gemini-[12]\./.test(modelo) ? { temperature: 0 } : {}),
       responseMimeType: 'application/json',
       responseSchema: esquemaLeitura(rubricas.map((r) => r.codigo)),
       maxOutputTokens: 8192,

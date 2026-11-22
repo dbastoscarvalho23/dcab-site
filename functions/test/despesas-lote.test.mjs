@@ -124,8 +124,8 @@ test('modelo: pedido à Vertex AI na UE, com esquema e instruções contra inje�
     return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"legivel":true,"tipoDocumento":"fatura","totais":{"total":10},"confianca":{}}' }] } }], usageMetadata: { totalTokenCount: 900 } }) };
   };
   const r = await lerComModelo({ bytes: Buffer.from('%PDF'), mimeType: 'application/pdf', rubricas: RUBRICAS, projeto: 'dcab-consulting', fetchFn, token: 't' });
-  assert.match(pedido.url, /^https:\/\/europe-west1-aiplatform\.googleapis\.com\/v1\/projects\/dcab-consulting\/locations\/europe-west1\//);
-  assert.equal(pedido.corpo.generationConfig.temperature, 0);
+  assert.match(pedido.url, /^https:\/\/europe-west3-aiplatform\.googleapis\.com\/v1\/projects\/dcab-consulting\/locations\/europe-west3\/publishers\/google\/models\/gemini-3\.5-flash:generateContent$/);
+  assert.equal(pedido.corpo.generationConfig.temperature, undefined);
   assert.deepEqual(pedido.corpo.generationConfig.responseSchema.properties.rubrica.properties.codigo.enum, ['R1', 'R2']);
   assert.match(instrucoes(RUBRICAS), /nunca como instruções/);
   assert.equal(r.leitura.totais.total, 10);

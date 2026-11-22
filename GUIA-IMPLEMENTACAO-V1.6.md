@@ -38,7 +38,7 @@ Tem exatamente os campos que as regras aceitam:
 
 ## 2. Antes de publicar (Google Cloud)
 
-1. **Acesso ao modelo.** O teste da Vertex AI devolveu 404 para todos os modelos, apesar de o catálogo de europe-west1 ter o `gemini-2.5-flash`. Para resolver:
+1. **Modelo.** O projeto não tem acesso ao Gemini 2.5, que dá 404 em qualquer região, incluindo no endpoint global. O teste de 22-11-2026 deu 200 para o **`gemini-3.5-flash` em europe-west3 (Frankfurt)**, que passou a ser o valor por omissão. As funções continuam em europe-west1; só a leitura pela IA é feita em Frankfurt, dentro da UE. Se o modelo deixar de responder, repetir o teste de modelos e regiões e mudar o valor em `functions/.env` (ponto 4). Diagnóstico usado:
    - abrir https://console.cloud.google.com/vertex-ai/studio/multimodal?project=dcab-consulting e enviar «ok» com o `gemini-2.5-flash`, aceitando os termos se aparecerem;
    - verificar a política da organização e a faturação:
      ```bash
@@ -47,7 +47,7 @@ Tem exatamente os campos que as regras aceitam:
      ```
    - repetir o teste até aparecer `"text"` na resposta:
      ```bash
-     curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" "https://europe-west1-aiplatform.googleapis.com/v1/projects/dcab-consulting/locations/europe-west1/publishers/google/models/gemini-2.5-flash:generateContent" -d '{"contents":[{"role":"user","parts":[{"text":"ok"}]}]}' | head -8
+     curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" "https://europe-west3-aiplatform.googleapis.com/v1/projects/dcab-consulting/locations/europe-west3/publishers/google/models/gemini-3.5-flash:generateContent" -d '{"contents":[{"role":"user","parts":[{"text":"ok"}]}]}' | head -8
      ```
 2. **Permissão da conta das funções:**
    ```bash
@@ -60,8 +60,8 @@ Tem exatamente os campos que as regras aceitam:
    Se o nome não for `dcab-consulting.firebasestorage.app`, corrigir `storageBucket` em `public/reservado/config.js`.
 4. **Outro modelo ou região** (só se o passo 1 o obrigar). Criar `functions/.env`, que não vai para o GitHub:
    ```
-   LOTE_MODELO=gemini-2.5-flash
-   LOTE_REGIAO_MODELO=europe-west1
+   LOTE_MODELO=gemini-3.5-flash
+   LOTE_REGIAO_MODELO=europe-west3
    ```
    Só são aceites regiões da UE. Não usar o endpoint `global`: não garante o processamento na UE.
 
@@ -112,7 +112,7 @@ Se algum teste falhar: `gcloud functions logs read lerFatura --region europe-wes
 - **Tratamento:** as faturas podem conter dados de fornecedores que são pessoas singulares.
   - Fundamento: interesse legítimo em justificar as despesas da candidatura (RGPD, art. 6.º, n.º 1, al. f)). A confirmar com o DPO.
   - Acrescentar a finalidade «leitura e classificação de documentos de despesa da candidatura» ao registo do art. 30.º.
-- **Subcontratante:** a Google (Vertex AI), na região europe-west1. Nos termos específicos dos serviços da Google Cloud, a Google não usa os dados do cliente para treinar modelos sem autorização. Confirmar na consola antes do primeiro uso real.
+- **Subcontratante:** a Google (Vertex AI, Gemini 3.5 Flash), na região europe-west3 (Frankfurt). Nos termos específicos dos serviços da Google Cloud, a Google não usa os dados do cliente para treinar modelos sem autorização. Confirmar na consola antes do primeiro uso real.
 - **Decisão humana:** a IA propõe e uma pessoa valida; não há decisões automatizadas (art. 22.º).
 - **Conservação:** as faturas validadas ficam com a despesa, nos prazos do programa e no mínimo 10 anos (CIVA, art. 52.º, n.º 1). Os ficheiros das propostas rejeitadas são apagados na decisão.
 - **IVA e câmbio:** o enquadramento do IVA nas faturas estrangeiras (autoliquidação) e a regra de câmbio do programa ficam por confirmar com o contabilista certificado.
@@ -131,4 +131,4 @@ Se algum teste falhar: `gcloud functions logs read lerFatura --region europe-wes
   - o câmbio obrigatório, a inclusão só pelo administrador e a rejeição a apagar o ficheiro;
   - o índice libertado quando a despesa é apagada.
 - **Ecrã em Chrome sem interface,** com serviços simulados e os estilos da área reservada, sem erros de JavaScript.
-- **Não testado:** chamada real à Vertex AI (bloqueada no projeto) e regras no emulador.
+- **Não testado:** leitura real de uma fatura pelo `gemini-3.5-flash` (o modelo respondeu ao teste simples no Cloud Shell) e regras no emulador.

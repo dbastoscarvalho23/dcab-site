@@ -12,7 +12,7 @@ import {
   ESTADOS, LIMITES, caminhoValido, tipoPorAssinatura, limparLeitura, chavesDocumento, chaveFornecedor,
   verificarDocumento, possiveisRepeticoes, idDeChave, centimos, dadosDeDespesa, resumoDe, construirDespesa,
 } from './logica.mjs';
-import { lerComModelo, MODELO_POR_OMISSAO } from './modelo.mjs';
+import { lerComModelo, MODELO_POR_OMISSAO, REGIAO_MODELO_POR_OMISSAO } from './modelo.mjs';
 import { CONFIG } from './config.mjs';
 import { QUADRO, RUBRICAS, NIF_BENEFICIARIO, fimElegibilidade } from './quadro.mjs';
 
@@ -22,7 +22,7 @@ const REGIAO = 'europe-west1';
 // Modelo e região: functions/.env (LOTE_MODELO, LOTE_REGIAO_MODELO); sem ficheiro, os valores por omissão.
 // A região do modelo pode ser diferente da das funções, mas só regiões da UE são aceites.
 const MODELO = { value: () => process.env.LOTE_MODELO || MODELO_POR_OMISSAO };
-const REGIAO_MODELO = { value: () => process.env.LOTE_REGIAO_MODELO || REGIAO };
+const REGIAO_MODELO = { value: () => process.env.LOTE_REGIAO_MODELO || REGIAO_MODELO_POR_OMISSAO };
 const REGIOES_UE = /^europe-(west|north|central|southwest)\d+$/;
 
 const db = () => getFirestore();
