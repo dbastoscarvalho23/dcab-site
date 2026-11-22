@@ -13,3 +13,11 @@ functions/.env*
 *.zip
 *.log
 .DS_Store
+node_modules/
+.env
+.env.*
+functions/.env*
+.firebase/
+*.zip
+*.log
+.DS_Store
