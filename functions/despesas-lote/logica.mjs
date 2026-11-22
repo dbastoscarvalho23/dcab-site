@@ -273,3 +273,88 @@ export function caminhoValido(caminho, candidaturaId, loteId) {
   if (!seguro.test(candidaturaId) || !seguro.test(loteId)) return false;
   return new RegExp(`^lotes/${candidaturaId}/${loteId}/[a-f0-9]{64}\\.(pdf|jpg|png)$`).test(String(caminho));
 }
+
+// ---------- Despesas já registadas (separador Despesas) ----------
+// Converte uma despesa da área reservada para os campos usados nas chaves de repetição.
+// A despesa só guarda NIF português; o fornecedor estrangeiro é reconhecido pelo nome.
+export function dadosDeDespesa(d) {
+  const nif = String(d?.nif ?? '').replace(/\D/g, '');
+  const semIva = typeof d?.semIva === 'number' ? d.semIva : null;
+  const iva = typeof d?.iva === 'number' ? d.iva : 0;
+  return {
+    tipoDocumento: 'fatura',
+    numero: d?.documento || null,
+    atcud: (String(d?.comprovativo ?? '').match(/ATCUD\s+([A-Z0-9]{8,}-\d+)/i) || [])[1] || null,
+    dataEmissao: d?.dataDocumento || null,
+    fornecedor: { nome: d?.fornecedor || null, nif: nif.length === 9 ? nif : null, pais: nif.length === 9 ? 'PT' : null },
+    totais: { base: semIva, imposto: iva, total: semIva === null ? null : Math.round((semIva + iva) * 100) / 100 },
+    moeda: 'EUR',
+  };
+}
+
+export function resumoDe(leitura) {
+  return {
+    fornecedor: leitura.fornecedor?.nome ?? null,
+    fornecedorChave: chaveFornecedor(leitura.fornecedor),
+    numero: leitura.numero ?? null,
+    numeroNormalizado: normalizarNumeroDocumento(leitura.numero),
+    dataEmissao: leitura.dataEmissao ?? null,
+    total: leitura.totais?.total ?? null,
+    moeda: leitura.moeda ?? null,
+  };
+}
+
+// Campos de uma despesa nova, exatamente como as regras do Firestore aceitam (despesaValida).
+export function construirDespesa({ leitura, decisao, ficheiro, loteId, email, linhasQuadro, agora }) {
+  const erros = [];
+  const linha = linhasQuadro.find((l) => l.codigo === decisao.linha);
+  if (!linha) erros.push('Escolha uma linha orçamental da candidatura.');
+  if (leitura.tipoDocumento === 'nota-credito') erros.push('Notas de crédito não entram em lote: registe-as no separador Despesas, a corrigir a despesa original.');
+  const eur = leitura.moeda && leitura.moeda !== 'EUR';
+  const taxa = eur ? Number(decisao.taxaCambio) : 1;
+  if (eur && !(taxa > 0 && taxa < 100000)) erros.push('Indique a taxa de câmbio para euros.');
+  const conv = (v) => (typeof v === 'number' ? Math.round(v * taxa * 100) / 100 : null);
+  let base = leitura.totais.base;
+  if (base == null && leitura.totais.total != null) base = Math.round((leitura.totais.total - (leitura.totais.imposto ?? 0)) * 100) / 100;
+  if (base == null) erros.push('Indique o valor sem IVA.');
+  else if (base < 0) erros.push('Valor negativo: registe-o no separador Despesas.');
+  const mes = String(decisao.mesReferencia ?? '');
+  if (linha?.rubrica === 4 && !/^\d{4}-\d{2}$/.test(mes)) erros.push('Indique o mês de referência (linhas de contratação).');
+  if (erros.length) return { erros };
+
+  const id = verificarIdFiscal(leitura.fornecedor.nif, leitura.fornecedor.pais);
+  const nifPt = id.estado === 'valido' ? id.numero : '';
+  const obs = [
+    `Submetida em lote (${loteId}); leitura por IA validada por ${email}.`,
+    !nifPt && id.completo ? `Id. fiscal do fornecedor: ${id.completo}.` : null,
+    eur ? `Valores em ${leitura.moeda} convertidos à taxa ${taxa}${decisao.fonteCambio ? ' (' + String(decisao.fonteCambio).slice(0, 60) + ')' : ''}.` : null,
+    leitura.autoliquidacao ? 'Autoliquidação de IVA pelo adquirente.' : null,
+    decisao.observacoes ? String(decisao.observacoes) : null,
+  ].filter(Boolean).join(' ');
+  const comprovativo = [leitura.atcud ? 'ATCUD ' + leitura.atcud : null, 'Arquivo: ' + ficheiro.caminho].filter(Boolean).join(' · ');
+  const descricao = leitura.linhas.map((x) => x.descricao).filter(Boolean).join('; ') || leitura.observacoes || '';
+  return {
+    despesa: {
+      linha: linha.codigo,
+      fornecedor: String(leitura.fornecedor.nome ?? '').slice(0, 150),
+      nif: nifPt,
+      documento: String(leitura.numero ?? '').slice(0, 60),
+      dataDocumento: leitura.dataEmissao ?? '',
+      mesReferencia: linha.rubrica === 4 ? mes : '',
+      descricao: descricao.slice(0, 300),
+      semIva: conv(base),
+      iva: conv(leitura.totais.imposto),
+      ivaElegivel: decisao.ivaElegivel === true,
+      dataPagamento: '',
+      meioPagamento: '',
+      pedido: '',
+      estado: 'Lançada',
+      valorValidado: null,
+      comprovativo: comprovativo.slice(0, 200),
+      observacoes: obs.slice(0, 500),
+      ordem: agora,
+      criadoPor: email,
+      atualizadoPor: email,
+    },
+  };
+}

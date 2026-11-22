@@ -136,6 +136,17 @@ service cloud.firestore {
         allow delete: if admin() && !pedidoFechado(projeto, resource.data.pedido);
       }
 
+      // Faturas em lote (versão 1.6): propostas lidas pela IA e índice de documentos repetidos.
+      // Só as funções do servidor escrevem (lerFatura, decidirDespesa, indexarDespesa); a equipa da candidatura lê.
+      match /despesasPropostas/{id} {
+        allow read: if equipaCand();
+        allow write: if false;
+      }
+      match /indiceDespesas/{id} {
+        allow read: if equipaCand();
+        allow write: if false;
+      }
+
       match /pedidos/{codigo} {
         allow read: if equipaCand();
         allow create: if admin() && codigoPedido(codigo) && pedidoValido(request.resource.data);

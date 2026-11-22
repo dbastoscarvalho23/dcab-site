@@ -226,3 +226,27 @@ fieldset.campo--largo { border: 1px solid var(--linha); padding: 10px 14px; disp
 .grelha-fabricantes legend { font-weight: 600; margin-bottom: 8px; }
 .nota-pequena { font-size: .82rem; color: var(--aco); }
 @media (max-width: 560px) { .grelha-fabricantes { grid-template-columns: 1fr; } }
+
+/* ---------- Faturas em lote (versão 1.6) ---------- */
+.lote { display: flex; flex-direction: column; gap: 16px; }
+.lote-zona { display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; padding: 28px 20px; background: var(--papel); border: 2px dashed var(--linha); color: var(--aco); cursor: pointer; }
+.lote-zona strong { color: var(--tinta); font-weight: 600; }
+.lote-zona:hover, .lote-zona.ativa { border-color: var(--sinal); }
+.lote-entrada { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.lote-resumo { margin: 0; color: var(--aco); font-size: .92rem; }
+.lote > .botao { align-self: flex-start; }
+.lote-tabela select { font: inherit; font-size: .88rem; max-width: 26ch; padding: 4px 6px; border: 1px solid var(--linha); background: var(--papel); color: var(--tinta); }
+.lote-detalhe > td { background: var(--nevoa); }
+.lote-detalhe .erro { color: #B3261E; margin: 0 0 8px; }
+.lote-detalhe .avisos { margin: 0 0 8px; padding-left: 1.2em; color: var(--tinta); }
+.lote-detalhe .justificacao { margin: 0 0 8px; color: var(--aco); font-size: .9rem; }
+.aviso-repetida { border-left: 4px solid #B3261E; background: var(--papel); padding: 10px 14px; margin: 0 0 10px; }
+.aviso-repetida p { margin: 4px 0 0; }
+.estado-possivel-repeticao .aviso-repetida { border-left-color: #E5933B; }
+.correcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 14px; border: 1px solid var(--linha); padding: 12px 14px; margin: 0 0 10px; background: var(--papel); }
+.correcoes legend { padding: 0 6px; font-weight: 600; }
+.correcoes label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--aco); }
+.correcoes input, .correcoes select { font: inherit; font-size: .92rem; padding: 6px 8px; border: 1px solid var(--linha); background: var(--papel); color: var(--tinta); }
+.lote-detalhe .acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.lote-detalhe textarea { font: inherit; font-size: .9rem; min-width: 260px; padding: 6px 8px; border: 1px solid var(--linha); background: var(--papel); color: var(--tinta); }
+.lote-tabela td:nth-child(5) { white-space: nowrap; }

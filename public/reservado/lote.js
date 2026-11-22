@@ -4,7 +4,7 @@
 // Utilização (em app.js):
 //   import { montarLote } from './lote.js';
 //   montarLote(elemento, {
-//     candidaturaId, rubricas: [{ codigo, nome }], eAdmin,
+//     candidaturaId, rubricas: [{ codigo, nome }] (linhas do quadro de investimento), eAdmin,
 //     enviar: (caminho, ficheiro) => uploadBytes(ref(storage, caminho), ficheiro, { contentType: ficheiro.type }),
 //     chamar: (nome, dados) => httpsCallable(functions, nome)(dados).then((r) => r.data),
 //     aoValidar: () => recarregarDespesas(),
@@ -14,6 +14,11 @@ const MAX_FICHEIROS = 50;
 const MAX_BYTES = 15 * 1024 * 1024;
 const PARALELO = 3;
 const TIPOS = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
+
+const ETIQUETA = {
+  'por-validar': 'info', 'possivel-repeticao': 'alerta', repetida: 'perigo', ilegivel: 'perigo', erro: 'perigo',
+  recusado: 'perigo', validada: 'ok', rejeitada: 'neutro',
+};
 
 const ROTULOS = {
   'na-fila': 'Na fila', 'a-enviar': 'A enviar', 'a-ler': 'A ler', 'por-validar': 'Por validar',
@@ -55,11 +60,13 @@ export function montarLote(raiz, opcoes) {
   const resumo = el('p', { classe: 'lote-resumo', role: 'status', 'aria-live': 'polite' });
   const botaoValidarTodas = el('button', { type: 'button', classe: 'botao', hidden: true, onclick: validarSemAvisos });
   const corpo = el('tbody');
-  const tabela = el('table', { classe: 'lote-tabela' },
-    el('thead', {}, el('tr', {}, ['Ficheiro', 'Estado', 'Fornecedor', 'N.º', 'Data', 'Total', 'Rubrica', ''].map((t) => el('th', { scope: 'col' }, t)))),
-    corpo);
+  const tabela = el('div', { classe: 'tabela-envolvente' }, el('table', { classe: 'tabela lote-tabela' },
+    el('thead', {}, el('tr', {}, ['Ficheiro', 'Estado', 'Fornecedor', 'N.º', 'Data', 'Total', 'Linha orçamental', ''].map((t) => el('th', { scope: 'col' }, t)))),
+    corpo));
 
-  raiz.replaceChildren(el('section', { classe: 'lote' }, el('h3', {}, 'Submeter faturas em lote'), zona, entrada, resumo, botaoValidarTodas, tabela));
+  raiz.replaceChildren(el('section', { classe: 'lote' },
+    el('p', { classe: 'nota' }, 'Cada fatura é lida pela IA e fica por validar. Os documentos repetidos (mesmo ficheiro, ou mesmo fornecedor e número de uma despesa já registada) são assinalados e não são considerados. Nada entra nas despesas sem validação.'),
+    zona, entrada, resumo, botaoValidarTodas, tabela));
 
   entrada.addEventListener('change', () => { adicionar([...entrada.files]); entrada.value = ''; });
   zona.addEventListener('dragover', (e) => { e.preventDefault(); zona.classList.add('ativa'); });
@@ -127,20 +134,23 @@ export function montarLote(raiz, opcoes) {
   }
 
   function decisaoValidar(item) {
-    const d = { acao: 'validar', rubrica: item.rubrica, correcoes: item.correcoes ?? {} };
+    const d = { acao: 'validar', linha: item.rubrica, correcoes: item.correcoes ?? {}, ivaElegivel: !!item.ivaElegivel };
+    if (String(item.rubrica).startsWith('4.')) d.mesReferencia = item.mesReferencia ?? '';
     if (item.estado === 'possivel-repeticao') d.confirmoNaoRepetida = !!item.confirmoNaoRepetida;
     if (item.taxaCambio) { d.taxaCambio = Number(String(item.taxaCambio).replace(',', '.')); d.fonteCambio = item.fonteCambio ?? null; }
     return d;
   }
 
+  const prontaSemAvisos = (i) => i.estado === 'por-validar' && !(i.resposta?.avisos ?? []).length && i.rubrica && !String(i.rubrica).startsWith('4.');
+
   async function validarSemAvisos() {
-    const prontas = itens.filter((i) => i.estado === 'por-validar' && !(i.resposta.avisos ?? []).length && i.rubrica);
+    const prontas = itens.filter(prontaSemAvisos);
     for (const item of prontas) await decidir(item, decisaoValidar(item));
   }
 
   function desenhar() {
     const conta = (e) => itens.filter((i) => i.estado === e).length;
-    const prontas = itens.filter((i) => i.estado === 'por-validar' && !(i.resposta?.avisos ?? []).length && i.rubrica).length;
+    const prontas = itens.filter(prontaSemAvisos).length;
     resumo.textContent = itens.length
       ? [`Ficheiros: ${itens.length}`, `Por validar: ${conta('por-validar') + conta('possivel-repeticao')}`, `Validadas: ${conta('validada')}`,
         `Repetidas (não consideradas): ${conta('repetida')}`, `Com problema: ${conta('ilegivel') + conta('erro') + conta('recusado')}`,
@@ -153,20 +163,20 @@ export function montarLote(raiz, opcoes) {
 
   function linhas(item) {
     const l = item.resposta?.leitura;
-    const seletor = el('select', { 'aria-label': 'Rubrica', disabled: !['por-validar', 'possivel-repeticao'].includes(item.estado) || item.ocupado,
+    const seletor = el('select', { 'aria-label': 'Linha orçamental', classe: 'lote-linha-orc', disabled: !['por-validar', 'possivel-repeticao'].includes(item.estado) || item.ocupado,
       onchange: (e) => { item.rubrica = e.target.value; desenhar(); } },
     el('option', { value: '' }, '— escolher —'),
     rubricas.map((r) => el('option', { value: r.codigo, selected: r.codigo === item.rubrica }, `${r.codigo} · ${r.nome}`)));
     const aberto = item.aberto ?? ['possivel-repeticao', 'repetida', 'erro', 'ilegivel'].includes(item.estado);
     const principal = el('tr', { classe: `lote-linha estado-${item.estado}` },
       el('td', {}, item.ficheiro.name),
-      el('td', {}, el('span', { classe: `etiqueta estado-${item.estado}` }, ROTULOS[item.estado] ?? item.estado)),
+      el('td', {}, el('span', { classe: `etiqueta etiqueta--${ETIQUETA[item.estado] ?? 'neutro'}` }, ROTULOS[item.estado] ?? item.estado)),
       el('td', {}, l?.fornecedor?.nome ?? '—'),
       el('td', {}, l?.numero ?? '—'),
       el('td', {}, l?.dataEmissao ?? '—'),
       el('td', { classe: 'numero' }, dinheiro(l?.totais?.total, l?.moeda)),
       el('td', {}, seletor),
-      el('td', {}, el('button', { type: 'button', classe: 'ligacao', 'aria-expanded': String(aberto), onclick: () => { item.aberto = !aberto; desenhar(); } }, aberto ? 'Fechar' : 'Detalhe')));
+      el('td', { classe: 'acoes' }, el('button', { type: 'button', classe: 'ligacao', 'aria-expanded': String(aberto), onclick: () => { item.aberto = !aberto; desenhar(); } }, aberto ? 'Fechar' : 'Detalhe')));
     return aberto ? [principal, el('tr', { classe: `lote-detalhe estado-${item.estado}` }, el('td', { colspan: '8' }, detalhe(item)))] : [principal];
   }
 
@@ -179,13 +189,13 @@ export function montarLote(raiz, opcoes) {
       const rep = r.repeticao, o = rep.resumo ?? {};
       partes.push(el('div', { classe: 'aviso-repetida' },
         el('strong', {}, rep.tipo === 'ficheiro' ? 'Este ficheiro já foi submetido.' : 'Este documento já está registado.'),
-        el('p', {}, `Original: ${o.fornecedor ?? '—'} · ${o.numero ?? 'sem número'} · ${o.dataEmissao ?? '—'} · ${dinheiro(o.total, o.moeda)}${rep.despesaId ? ' (despesa validada)' : ' (em validação)'}.`),
+        el('p', {}, `Original: ${o.fornecedor ?? '—'} · ${o.numero ?? 'sem número'} · ${o.dataEmissao ?? '—'} · ${dinheiro(o.total, o.moeda)}${rep.despesaId ? ' (já nas despesas)' : ' (em validação noutro lote)'}.`),
         rep.nota ? el('p', {}, rep.nota) : null,
         el('p', {}, 'Não é considerado nas despesas nem nos pedidos de pagamento.')));
       const motivo = el('textarea', { rows: '2', 'aria-label': 'Motivo para incluir', placeholder: 'Motivo (obrigatório, pelo menos 15 caracteres)' });
       partes.push(el('div', { classe: 'acoes' },
         el('button', { type: 'button', classe: 'botao', disabled: item.ocupado, onclick: () => decidir(item, { acao: 'rejeitar', motivo: 'Repetida' }) }, 'Dispensar'),
-        eAdmin && rep.tipo === 'documento' ? [motivo, el('button', { type: 'button', classe: 'botao secundario', disabled: item.ocupado, onclick: () => decidir(item, { acao: 'incluir-mesmo-assim', motivo: motivo.value }) }, 'Incluir mesmo assim')] : null));
+        eAdmin && rep.tipo === 'documento' ? [motivo, el('button', { type: 'button', classe: 'botao botao--linha', disabled: item.ocupado, onclick: () => decidir(item, { acao: 'incluir-mesmo-assim', motivo: motivo.value }) }, 'Incluir mesmo assim')] : null));
       return partes;
     }
     if (item.estado === 'repetida') return partes; // repetida dentro do lote, sem resposta do servidor
@@ -196,7 +206,7 @@ export function montarLote(raiz, opcoes) {
     }
 
     if ((r.avisos ?? []).length) partes.push(el('ul', { classe: 'avisos' }, r.avisos.map((a) => el('li', {}, a.texto))));
-    if (l.rubrica?.justificacao) partes.push(el('p', { classe: 'justificacao' }, `Rubrica proposta: ${l.rubrica.codigo} — ${l.rubrica.justificacao}`));
+    if (l.rubrica?.justificacao) partes.push(el('p', { classe: 'justificacao' }, `Linha proposta pela IA: ${l.rubrica.codigo} — ${l.rubrica.justificacao}`));
 
     if (item.estado === 'possivel-repeticao') {
       partes.push(el('div', { classe: 'aviso-repetida' },
@@ -220,13 +230,16 @@ export function montarLote(raiz, opcoes) {
         campo('Imposto', c.totais?.imposto ?? l.totais.imposto, (v) => { c.totais = { ...c.totais, imposto: numeroOuNulo(v) }; }, 'number'),
         campo('Total', c.totais?.total ?? l.totais.total, (v) => { c.totais = { ...c.totais, total: numeroOuNulo(v) }; }, 'number'),
         campo('Moeda', c.moeda ?? l.moeda ?? 'EUR', (v) => { c.moeda = v.toUpperCase(); desenhar(); }),
+        el('label', {}, 'IVA elegível?', el('select', { onchange: (e) => { item.ivaElegivel = e.target.value === 'sim'; } },
+          el('option', { value: 'nao', selected: !item.ivaElegivel }, 'Não'), el('option', { value: 'sim', selected: !!item.ivaElegivel }, 'Sim'))),
+        String(item.rubrica).startsWith('4.') ? campo('Mês de referência', item.mesReferencia, (v) => { item.mesReferencia = v; }, 'month') : null,
         (c.moeda ?? l.moeda ?? 'EUR') !== 'EUR' ? [
           campo('Taxa de câmbio (1 unidade = x €)', item.taxaCambio, (v) => { item.taxaCambio = v; }),
           campo('Fonte do câmbio', item.fonteCambio, (v) => { item.fonteCambio = v; }),
         ] : null));
       partes.push(el('div', { classe: 'acoes' },
         el('button', { type: 'button', classe: 'botao', disabled: item.ocupado || !item.rubrica, onclick: () => decidir(item, decisaoValidar(item)) }, 'Validar'),
-        el('button', { type: 'button', classe: 'botao secundario', disabled: item.ocupado, onclick: () => decidir(item, { acao: 'rejeitar', motivo: 'Rejeitada na revisão' }) }, 'Rejeitar')));
+        el('button', { type: 'button', classe: 'botao botao--linha', disabled: item.ocupado, onclick: () => decidir(item, { acao: 'rejeitar', motivo: 'Rejeitada na revisão' }) }, 'Rejeitar')));
     }
     return partes;
   }

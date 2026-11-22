@@ -65,6 +65,7 @@ NORMAS = [
 ]
 
 VERSOES = [
+    ("Área reservada (faturas em lote)", "1.6", "22-11-2026", "Submissão de várias faturas de uma vez, leitura de cada documento por IA na União Europeia, proposta de linha orçamental, deteção de documentos repetidos e validação humana antes de registar a despesa"),
     ("Site dcabconsulting.com", "1.5", "06-11-2026", "Tema claro e escuro, marcação de classificação, referências normativas nas soluções, demonstração de prevenção de fuga de dados e escala de classificação"),
     ("Observatório de Exposição Digital (aspeto)", "1.4", "06-11-2026", "Tema claro e escuro e marcação de classificação, alinhados com o site; o motor de análise não muda"),
     ("Observatório de Exposição Digital (endereço)", "1.3", "22-10-2026", "Novo endereço: observatorio.dcabconsulting.com"),
@@ -79,6 +80,7 @@ VERSOES = [
 ]
 
 ALTERACOES = [
+    ("22-11-2026", "Versão 1.6", "Faturas em lote na área reservada: a equipa carrega várias faturas de uma vez, nacionais ou estrangeiras; cada documento é lido por um modelo de IA da Google Cloud na região europe-west1, que propõe os dados e a linha orçamental. Os documentos repetidos (o mesmo ficheiro, ou o mesmo fornecedor e número de uma despesa já registada) são assinalados e não são considerados. Nenhuma despesa é registada sem validação de uma pessoa."),
     ("06-11-2026", "Versão 1.5", "Novo aspeto no site e no Observatório: tema claro e escuro, que segue o sistema ou a escolha feita no botão do cabeçalho; marcação «Classificação: Público» no topo e no rodapé; referência normativa em cada solução; demonstração de prevenção de fuga de dados com dados fictícios, que corre só no navegador; escala de classificação com os quatro níveis. A escolha do tema fica guardada só no navegador. Política de privacidade: escolha do tema."),
     ("22-10-2026", "Versão 1.4.1", "O Observatório passa para observatorio.dcabconsulting.com. O endereço antigo (diagnostico.dcabconsulting.com) redireciona para o novo. Área reservada: corrigido o registo de incidentes pelo cliente e pela equipa com responsável e contactos, que as regras recusavam por excederem o limite de 1000 expressões avaliadas do Firestore."),
     ("22-10-2026", "Versão 1.4", "Alertas de vulnerabilidades por fabricante na área reservada: o cliente escolhe os fabricantes ou importa a lista de ativos (fabricante, produto, versão); de 15 em 15 minutos, as vulnerabilidades novas da lista CVE, do NVD, do KEV e da EUVD, e diariamente o EPSS, são cruzadas com essa lista. Email imediato para as exploradas e as críticas com probabilidade alta de exploração; resumo diário das altas e críticas. Nenhum dado de cliente é enviado às fontes. Política de privacidade: alertas de vulnerabilidades."),
@@ -98,7 +100,7 @@ JSONLD = {
     "@context": "https://schema.org",
     "@graph": [
         {"@type": "WebPage", "@id": URL + "#pagina", "url": URL, "name": "Referências e versão", "description": DESCRICAO,
-         "inLanguage": "pt-PT", "dateModified": "2026-11-06",
+         "inLanguage": "pt-PT", "dateModified": "2026-11-22",
          "publisher": {"@type": "Organization", "@id": SITE + "/#organizacao", "name": "DCAB Consulting", "url": SITE + "/"}},
         {"@type": "BreadcrumbList", "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": "Início", "item": SITE + "/"},

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "indiceDespesas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "resumo.fornecedorChave", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

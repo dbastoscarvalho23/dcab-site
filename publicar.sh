@@ -2,11 +2,13 @@
 # DCAB Consulting — publicação verificada
 # Utilização: na pasta do site, executar:  bash publicar.sh
 #             para publicar também as funções do servidor (gestão de acessos):  bash publicar.sh funcoes
+#             na primeira publicação da versão 1.6 (faturas em lote: inclui as regras do Storage):  bash publicar.sh lote
 # Confirma que os ficheiros estão completos e corretos, publica, e testa o site no fim.
 
 cd "$(dirname "$0")" || exit 1
 ALVO="hosting,firestore:rules"
-[ "${1:-}" = "funcoes" ] && ALVO="hosting,firestore:rules,functions"
+[ "${1:-}" = "funcoes" ] && ALVO="hosting,firestore:rules,firestore:indexes,functions"
+[ "${1:-}" = "lote" ] && ALVO="hosting,firestore:rules,firestore:indexes,storage,functions"
 V=$'\033[32m'; E=$'\033[31m'; A=$'\033[33m'; N=$'\033[1m'; F=$'\033[0m'
 ok()    { echo "${V}✔${F} $1"; }
 aviso() { echo "${A}!${F} $1"; }
@@ -32,10 +34,12 @@ for f in firebase.json firestore.rules .firebaserc \
          public/assets/js/tema.js public/assets/js/interacao.js public/assets/fontes/ibm-plex-mono-latin-400-normal.woff \
          public/reservado/index.html public/reservado/app.js public/reservado/arranque.js \
          public/reservado/config.js public/reservado/modelo.js public/reservado/incidentes.js public/reservado/cve.js public/reservado/reservado.css \
-         public/reservado/vendor/pdf.min.mjs public/reservado/vendor/pdf.worker.min.mjs; do
+         public/reservado/vendor/pdf.min.mjs public/reservado/vendor/pdf.worker.min.mjs public/reservado/lote.js; do
   [ -f "$f" ] || falha "Falta o ficheiro: $f"
 done
-if [ "$ALVO" != "hosting,firestore:rules" ]; then
+if [[ "$ALVO" == *functions* ]]; then
+  for f in storage.rules firestore.indexes.json functions/despesas-lote/funcoes.mjs functions/despesas-lote/logica.mjs \
+           functions/despesas-lote/modelo.mjs functions/despesas-lote/config.mjs functions/despesas-lote/quadro.mjs; do [ -f "$f" ] || falha "Falta o ficheiro: $f"; done
   for f in functions/index.js functions/logica.js functions/vigilancia.js functions/fontes.js functions/incidentes-api.js functions/incidentes-prazos.mjs \
            functions/fontes-cve.js functions/cve-servidor.mjs functions/cve-logica.mjs functions/package.json; do [ -f "$f" ] || falha "Falta o ficheiro: $f"; done
   for f in functions/index.js functions/logica.js functions/vigilancia.js functions/fontes.js functions/incidentes-api.js functions/fontes-cve.js functions/cve-servidor.mjs; do node --check "$f" 2>/dev/null || falha "Erro de escrita no código de $f."; done
@@ -105,7 +109,7 @@ firebase login:list 2>/dev/null | grep -q "@" || falha "Sem sessão iniciada. Ex
 ok "Sessão: $(firebase login:list 2>/dev/null | grep -o '[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]*' | head -1)"
 
 echo "${N}5. Publicação${F}"
-[ "$ALVO" != "hosting,firestore:rules" ] && aviso "A publicação das funções do servidor demora 3 a 6 minutos. Se perguntar por uma política de limpeza (cleanup policy), prima Enter."
+[[ "$ALVO" == *functions* ]] && aviso "A publicação das funções do servidor demora 3 a 6 minutos. Se perguntar por uma política de limpeza (cleanup policy), prima Enter."
 if ! firebase deploy --only "$ALVO" --project dcab-consulting; then
   echo
   aviso "Se o erro mencionar «Cloud Firestore API» ou «database», a base de dados ainda não foi criada (guia, passo 47)."
@@ -136,6 +140,7 @@ c=$(curl -s -o /dev/null -w "%{http_code}" https://dcabconsulting.com/assets/vid
 [ "$c" = "200" ] && ok "Vídeo da abertura publicado" || aviso "Vídeo respondeu $c"
 c=$(curl -s -o /dev/null -w "%{http_code}" https://dcabconsulting.com/solucoes/simulador-classificacao)
 [ "$c" = "200" ] && ok "Simulador de classificação publicado" || aviso "Simulador respondeu $c"
+curl -s https://dcabconsulting.com/reservado/lote.js | grep -q "export function montarLote" && ok "Faturas em lote publicadas na área reservada" || aviso "reservado/lote.js não está publicado"
 c=$(curl -s -o /dev/null -w "%{http_code}" https://dcabconsulting.com/referencias)
 [ "$c" = "200" ] && ok "Página Referências e versão publicada" || aviso "Referências responderam $c"
 c=$(curl -s -o /dev/null -w "%{http_code}" https://dcabconsulting.com/reservado/incidentes.js)

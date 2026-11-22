@@ -733,3 +733,10 @@ exports.recolherCvesAgora = onCall({ timeoutSeconds: 300, memory: "1GiB" }, exec
   await ctx.auditar({ acao: "recolher-cve", colecao: "cve_estado", docId: "recolha", resumo: "verificação manual: " + JSON.stringify(r), por });
   return r;
 }));
+
+/* ---------- Faturas em lote com leitura por IA (versão 1.6) ----------
+ * Módulo ES em despesas-lote/ (o runtime nodejs22 carrega-o com require). */
+const lote = require("./despesas-lote/funcoes.mjs");
+exports.lerFatura = lote.lerFatura;
+exports.decidirDespesa = lote.decidirDespesa;
+exports.indexarDespesa = lote.indexarDespesa;
