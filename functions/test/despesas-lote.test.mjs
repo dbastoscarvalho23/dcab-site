@@ -136,3 +136,59 @@ test('modelo: erro HTTP propaga o estado (para repetir em 429/5xx)', async () =>
   const fetchFn = async () => ({ ok: false, status: 429 });
   await assert.rejects(lerComModelo({ bytes: Buffer.from('%PDF'), mimeType: 'application/pdf', rubricas: RUBRICAS, projeto: 'p', fetchFn, token: 't' }), (e) => e.estado === 429);
 });
+
+// ---------- Integração com a área reservada 1.5 ----------
+import { dadosDeDespesa, construirDespesa, resumoDe } from '../despesas-lote/logica.mjs';
+import * as Q from '../despesas-lote/quadro.mjs';
+import * as M from '../../public/reservado/modelo.js';
+
+test('quadro do servidor igual ao da área reservada', () => {
+  assert.deepEqual(Q.QUADRO, M.QUADRO);
+  assert.deepEqual(Q.RUBRICAS, M.RUBRICAS);
+  assert.equal(Q.NIF_BENEFICIARIO, M.NIF_BENEFICIARIO);
+  assert.equal(Q.fimElegibilidade('2026-01-15', 24), M.fimElegibilidade('2026-01-15', 24));
+});
+
+test('despesa já registada gera as mesmas chaves que a fatura lida em lote', () => {
+  const antiga = dadosDeDespesa({ fornecedor: 'Fornecedor, Lda', nif: '518180964', documento: 'FT 2026A/0077', dataDocumento: '2026-10-12', semIva: 100, iva: 23, comprovativo: 'ATCUD JFJ3K9T2-77' });
+  const lida = limparLeitura({ tipoDocumento: 'fatura', numero: 'FT2026A/77', fornecedor: { nif: 'PT518180964', nome: 'Fornecedor' }, totais: { total: 123 }, confianca: {} }, []);
+  assert.ok(chavesDocumento(lida).some((k) => chavesDocumento(antiga).includes(k)));
+  assert.equal(resumoDe(antiga).total, 123);
+  assert.equal(chavesDocumento(antiga).length, 2); // documento + ATCUD
+});
+
+const DESPESA_RULES = ['linha', 'fornecedor', 'nif', 'documento', 'dataDocumento', 'mesReferencia', 'descricao',
+  'semIva', 'iva', 'ivaElegivel', 'dataPagamento', 'meioPagamento', 'pedido', 'estado', 'valorValidado',
+  'comprovativo', 'observacoes', 'ordem', 'criadoEm', 'criadoPor', 'atualizadoEm', 'atualizadoPor'];
+
+test('despesa criada pelo lote só tem os campos que as regras aceitam, em euros', () => {
+  const leitura = limparLeitura({
+    tipoDocumento: 'fatura', numero: 'INV-100', dataEmissao: '2026-10-01', moeda: 'USD', autoliquidacao: true,
+    fornecedor: { nome: 'Check Point Software Technologies Ltd', pais: 'IL', nif: 'IL512345678' },
+    linhas: [{ descricao: 'CloudGuard WAF 12 meses', valorSemImposto: 1000 }], totais: { base: 1000, imposto: 0, total: 1000 }, confianca: {},
+  }, ['2.3']);
+  const { despesa, erros } = construirDespesa({ leitura, decisao: { linha: '3.8', taxaCambio: 0.92, fonteCambio: 'BCE', ivaElegivel: false },
+    ficheiro: { caminho: 'lotes/ai4cybersecurity/L1/' + 'a'.repeat(64) + '.pdf' }, loteId: 'L1', email: 'x@dcabconsulting.com', linhasQuadro: Q.QUADRO, agora: 1 });
+  assert.equal(erros, undefined);
+  const campos = [...Object.keys(despesa), 'criadoEm', 'atualizadoEm'];
+  assert.deepEqual(campos.filter((k) => !DESPESA_RULES.includes(k)), []);
+  assert.equal(despesa.semIva, 920);
+  assert.equal(despesa.nif, ''); // só NIF português
+  assert.match(despesa.observacoes, /IL512345678/);
+  assert.match(despesa.observacoes, /USD/);
+  assert.ok(despesa.comprovativo.length <= 200 && despesa.observacoes.length <= 500 && despesa.descricao.length <= 300);
+  assert.equal(despesa.estado, 'Lançada');
+  assert.equal(despesa.mesReferencia, '');
+});
+
+test('validação recusa nota de crédito, linha errada, câmbio em falta e contratação sem mês', () => {
+  const base = { tipoDocumento: 'fatura', numero: 'X1', moeda: 'EUR', fornecedor: { nome: 'A', nif: '518180964' }, totais: { base: 10, imposto: 2.3, total: 12.3 }, confianca: {} };
+  const f = { caminho: 'c' };
+  const tentar = (l, d) => construirDespesa({ leitura: limparLeitura(l, []), decisao: d, ficheiro: f, loteId: 'L', email: 'e', linhasQuadro: Q.QUADRO, agora: 1 });
+  assert.ok(tentar({ ...base, tipoDocumento: 'nota-credito' }, { linha: '2.1' }).erros);
+  assert.ok(tentar(base, { linha: '9.9' }).erros);
+  assert.ok(tentar({ ...base, moeda: 'GBP' }, { linha: '2.1' }).erros);
+  assert.ok(tentar(base, { linha: '4.1' }).erros);
+  assert.equal(tentar(base, { linha: '4.1', mesReferencia: '2026-10' }).despesa.mesReferencia, '2026-10');
+  assert.equal(tentar({ ...base, totais: { total: 12.3, imposto: 2.3 } }, { linha: '2.1' }).despesa.semIva, 10);
+});

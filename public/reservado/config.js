@@ -10,6 +10,8 @@ export const CONFIG = {
     appId: "1:921274534415:web:2387c3aebc151cbc5b717a",
   },
   projetoId: "ai4cybersecurity",
+  // Bucket do Storage para as faturas em lote (versão 1.6). Confirmar o nome na Consola Firebase › Storage.
+  storageBucket: "dcab-consulting.firebasestorage.app",
   dominioGoogle: "dcabconsulting.com",
   emissorMfa: "DCAB Consulting",
   inatividadeMinutos: 30,

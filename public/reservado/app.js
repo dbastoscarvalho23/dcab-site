@@ -13,10 +13,12 @@ import {
   getFirestore, doc, collection, getDoc, getDocs, onSnapshot, writeBatch, serverTimestamp, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+import { getStorage, ref as refStorage, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { CONFIG } from "./config.js";
 import * as M from "./modelo.js";
 import * as I from "./incidentes.js";
 import * as C from "./cve.js";
+import { montarLote } from "./lote.js";
 
 /* ---------- Utilitários ---------- */
 
@@ -340,6 +342,7 @@ function iniciarApp() {
   mostrar("app");
   $("app-papel").textContent = NOMES_PAPEL[estado.papel] || "";
   for (const b of document.querySelectorAll("[data-seccao]")) b.hidden = b.dataset.seccao !== "inicio" && !pode(b.dataset.seccao);
+  document.querySelector('[data-separador="lote"]').hidden = !podeEditar();
   if (!eCliente()) carregarLigacoes();
   if (pode("vigilancia") || pode("incidentes") || pode("vulnerabilidades")) iniciarVigilancia();
   if (pode("incidentes") && !eCliente()) iniciarIncidentesEquipa();
@@ -390,6 +393,8 @@ function desenhar() {
       const p = estado.parametros;
       $("app-titulo").textContent = p.projeto || "AI4CyberSecurity";
       $("app-entidade").textContent = p.entidade || "DCAB Consulting";
+      // O separador das faturas em lote tem estado próprio (ficheiros em curso): monta-se uma vez e não se redesenha
+      if (estado.separador === "lote") { prepararLote(); return; }
       const desenhos = { resumo: painelResumo, despesas: painelDespesas, pedidos: painelPedidos, quadro: painelQuadro, contratacao: painelContratacao, parametros: painelParametros };
       filhos = desenhos[estado.separador](dados);
     } else {
@@ -433,6 +438,22 @@ const indicador = (rotulo, valor, nota, destaque) => el("div", { class: "indicad
   el("p", { class: "indicador__rotulo", texto: rotulo }), el("p", { class: "indicador__valor", texto: valor }), nota ? el("p", { class: "indicador__nota", texto: nota }) : null);
 const etiqueta = (t, tipo) => el("span", { class: "etiqueta etiqueta--" + tipo, texto: t });
 const classeEstadoPedido = (e) => ({ "Pago": "ok", "Aprovado": "ok", "Submetido": "info", "Em análise": "info", "Com correções": "alerta" }[e] || "neutro");
+
+/* ---------- Faturas em lote com leitura por IA (versão 1.6) ---------- */
+let loteMontado = false;
+function prepararLote() {
+  if (loteMontado || !podeEditar()) return;
+  loteMontado = true;
+  const storage = getStorage(app, "gs://" + CONFIG.storageBucket);
+  montarLote($("painel-lote"), {
+    candidaturaId: CONFIG.projetoId,
+    rubricas: M.QUADRO.map((l) => ({ codigo: l.codigo, nome: l.descricao })),
+    eAdmin: eAdmin(),
+    enviar: (caminho, ficheiro) => uploadBytes(refStorage(storage, caminho), ficheiro, { contentType: ficheiro.type }),
+    chamar,
+    aoValidar: () => aviso("Despesa registada a partir do lote.", "ok"),
+  });
+}
 
 function painelResumo({ q, r, p, res }) {
   const fases = p.length

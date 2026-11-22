@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Storage da área reservada DCAB Consulting (versão 1.6: faturas em lote).
+// Só a equipa com papel admin ou editor e secção Candidatura carrega faturas, com email verificado e segundo fator.
+// Ninguém lê nem apaga pelo navegador: a leitura é feita pela função lerFatura e a remoção pela decidirDespesa.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function acesso() {
+      return firestore.get(/databases/(default)/documents/acessos/$(request.auth.token.email.lower())).data;
+    }
+    function editorCandidatura() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_second_factor == 'totp'
+        && firestore.exists(/databases/(default)/documents/acessos/$(request.auth.token.email.lower()))
+        && acesso().ativo == true
+        && acesso().papel in ['admin', 'editor']
+        && (acesso().papel == 'admin' || !('seccoes' in acesso()) || 'candidatura' in acesso().seccoes);
+    }
+
+    match /lotes/{projeto}/{lote}/{ficheiro} {
+      allow create: if editorCandidatura()
+        && projeto == 'ai4cybersecurity'
+        && lote.matches('^[A-Za-z0-9_-]{1,64}$')
+        && ficheiro.matches('^[a-f0-9]{64}[.](pdf|jpg|png)$')
+        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png');
+      allow read, update, delete: if false;
+    }
+
+    match /{todo=**} {
+      allow read, write: if false;
+    }
+  }
+}

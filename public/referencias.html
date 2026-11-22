@@ -37,7 +37,7 @@
       "name": "Referências e versão",
       "description": "Diplomas, normas e versões usados no site da DCAB Consulting, no Observatório, no detetor de informação sensível e no simulador de classificação, com a situação e a data da última revisão.",
       "inLanguage": "pt-PT",
-      "dateModified": "2026-11-06",
+      "dateModified": "2026-11-22",
       "publisher": {
         "@type": "Organization",
         "@id": "https://dcabconsulting.com/#organizacao",
@@ -151,6 +151,7 @@
       <div class="tabela-envolvente"><table class="tabela-conteudo">
         <thead><tr><th scope="col">Componente</th><th scope="col">Versão</th><th scope="col">Data</th><th scope="col">Inclui</th></tr></thead>
         <tbody>
+        <tr><td data-rotulo="Componente">Área reservada (faturas em lote)</td><td data-rotulo="Versão">1.6</td><td data-rotulo="Data">22-11-2026</td><td data-rotulo="Inclui">Submissão de várias faturas de uma vez, leitura de cada documento por IA na União Europeia, proposta de linha orçamental, deteção de documentos repetidos e validação humana antes de registar a despesa</td></tr>
         <tr><td data-rotulo="Componente">Site dcabconsulting.com</td><td data-rotulo="Versão">1.5</td><td data-rotulo="Data">06-11-2026</td><td data-rotulo="Inclui">Tema claro e escuro, marcação de classificação, referências normativas nas soluções, demonstração de prevenção de fuga de dados e escala de classificação</td></tr>
         <tr><td data-rotulo="Componente">Observatório de Exposição Digital (aspeto)</td><td data-rotulo="Versão">1.4</td><td data-rotulo="Data">06-11-2026</td><td data-rotulo="Inclui">Tema claro e escuro e marcação de classificação, alinhados com o site; o motor de análise não muda</td></tr>
         <tr><td data-rotulo="Componente">Observatório de Exposição Digital (endereço)</td><td data-rotulo="Versão">1.3</td><td data-rotulo="Data">22-10-2026</td><td data-rotulo="Inclui">Novo endereço: observatorio.dcabconsulting.com</td></tr>
@@ -167,6 +168,7 @@
 
       <h2>Registo de alterações</h2>
       <dl class="alteracoes">
+        <div><dt>22-11-2026 · Versão 1.6</dt><dd>Faturas em lote na área reservada: a equipa carrega várias faturas de uma vez, nacionais ou estrangeiras; cada documento é lido por um modelo de IA da Google Cloud na região europe-west1, que propõe os dados e a linha orçamental. Os documentos repetidos (o mesmo ficheiro, ou o mesmo fornecedor e número de uma despesa já registada) são assinalados e não são considerados. Nenhuma despesa é registada sem validação de uma pessoa.</dd></div>
         <div><dt>06-11-2026 · Versão 1.5</dt><dd>Novo aspeto no site e no Observatório: tema claro e escuro, que segue o sistema ou a escolha feita no botão do cabeçalho; marcação «Classificação: Público» no topo e no rodapé; referência normativa em cada solução; demonstração de prevenção de fuga de dados com dados fictícios, que corre só no navegador; escala de classificação com os quatro níveis. A escolha do tema fica guardada só no navegador. Política de privacidade: escolha do tema.</dd></div>
         <div><dt>22-10-2026 · Versão 1.4.1</dt><dd>O Observatório passa para observatorio.dcabconsulting.com. O endereço antigo (diagnostico.dcabconsulting.com) redireciona para o novo. Área reservada: corrigido o registo de incidentes pelo cliente e pela equipa com responsável e contactos, que as regras recusavam por excederem o limite de 1000 expressões avaliadas do Firestore.</dd></div>
         <div><dt>22-10-2026 · Versão 1.4</dt><dd>Alertas de vulnerabilidades por fabricante na área reservada: o cliente escolhe os fabricantes ou importa a lista de ativos (fabricante, produto, versão); de 15 em 15 minutos, as vulnerabilidades novas da lista CVE, do NVD, do KEV e da EUVD, e diariamente o EPSS, são cruzadas com essa lista. Email imediato para as exploradas e as críticas com probabilidade alta de exploração; resumo diário das altas e críticas. Nenhum dado de cliente é enviado às fontes. Política de privacidade: alertas de vulnerabilidades.</dd></div>
