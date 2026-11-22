@@ -1,0 +1,8 @@
+/* Submissão em lote: juntar ao reservado.css e trocar as cores pelos tokens do tema (claro e escuro). */
+.lote-zona{display:flex;flex-direction:column;gap:4px;border:2px dashed #9aa5b4;border-radius:8px;padding:20px;text-align:center;cursor:pointer}
+.lote-entrada{position:absolute;left:-9999px}
+.lote-tabela{width:100%;border-collapse:collapse;margin-top:12px}.lote-tabela th,.lote-tabela td{border-bottom:1px solid #e3e7ec;padding:6px 8px;text-align:left;vertical-align:top}
+.etiqueta{padding:2px 8px;border-radius:10px;background:#eef1f5;white-space:nowrap}.etiqueta.estado-repetida,.etiqueta.estado-erro{background:#fde2e1;color:#8a1c14}.etiqueta.estado-possivel-repeticao{background:#fff1cc;color:#6b4a00}.etiqueta.estado-validada{background:#dcf3e3;color:#155e2c}
+.aviso-repetida{border-left:4px solid #c0392b;padding:6px 10px;background:#fdf3f2;margin:6px 0}.estado-possivel-repeticao .aviso-repetida{border-color:#d4a017}
+.correcoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.correcoes label{display:flex;flex-direction:column;font-size:12px}
+.acoes{display:flex;gap:8px;margin-top:8px;align-items:flex-start}.numero{text-align:right}.erro{color:#8a1c14}
